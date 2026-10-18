@@ -2,7 +2,7 @@
 
 A personal portfolio project for NFL fantasy football predictions and data-driven start/sit recommendations. The eventual stack is FastAPI, pandas/scikit-learn/XGBoost, PostgreSQL, and Next.js/TypeScript/Tailwind, with possible Sleeper integration.
 
-Task 1 implements only a historical weekly data pipeline. No API routes, model, database, or frontend application have been built.
+Tasks 1 and 2 implement historical weekly data ingestion and leakage-safe player/matchup features. No API routes, model, database, or frontend application have been built.
 
 ## Setup
 
@@ -13,6 +13,7 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r backend/requirements-dev.txt
 python -m backend.scripts.build_player_stats
+python -m backend.scripts.build_features
 python -m pytest backend/tests -q
 ```
 
@@ -51,4 +52,8 @@ Generated datasets and local environments are ignored by Git. Read the result wi
 | `docs/data_pipeline.md` | Records the inspected schema, scoring choices, results, and limitations. |
 | `README.md` | Project goal, setup, commands, and file guide. |
 
-Next small task: create a leakage-safe feature dataset using each player's prior games, starting with lagged PPR and rolling usage averages, with tests that exclude the current and future weeks.
+## Feature engineering (Task 2)
+
+`backend/scripts/build_features.py` reads the cleaned dataset and a cached nflverse schedule, then writes `data/processed/player_features_2023_2025.parquet` and `feature_report.json`. The observed output has 18,533 rows and 45 columns. It includes lagged player production/usage, consistency, position-specific opponent PPR allowed, opponent yardage, and game context. Current-game statistics are excluded from inputs; actual PPR is stored only as `target_fantasy_points_ppr`.
+
+See [docs/feature_engineering.md](docs/feature_engineering.md) for feature definitions, missing-history rules, sources, commands, run results, and training limitations. `backend/tests/test_features.py` verifies the calculations and leakage protection with synthetic games. The feature report explicitly lists input, metadata, and target columns. Historical snap percentage remains unavailable.
