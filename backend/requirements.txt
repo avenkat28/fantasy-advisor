@@ -5,3 +5,5 @@ scikit-learn==1.9.1
 xgboost==3.4.1
 matplotlib==3.11.2
 joblib==1.6.0
+fastapi==0.161.1
+uvicorn==0.54.0
