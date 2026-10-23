@@ -1,10 +1,10 @@
 {
   "version": 1,
   "season": 2026,
-  "observed_at": "2026-10-23T19:09:35.938619+00:00",
-  "players": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/players.parquet",
-  "schedules": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/schedules.parquet",
-  "rosters": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/rosters.parquet",
+  "observed_at": "2026-10-23T20:11:22.440399+00:00",
+  "players": "data/snapshots/ed42ba9c248f46648d05bed87a68c842/players.parquet",
+  "schedules": "data/snapshots/ed42ba9c248f46648d05bed87a68c842/schedules.parquet",
+  "rosters": "data/snapshots/ed42ba9c248f46648d05bed87a68c842/rosters.parquet",
   "roster_seasons": [
     2026
   ],
@@ -17,6 +17,6 @@
   "rows": {
     "players": 20645,
     "schedules": 1127,
-    "rosters": 3500
+    "rosters": 7000
   }
 }
