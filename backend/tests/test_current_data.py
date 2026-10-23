@@ -37,6 +37,8 @@ def test_publish_preserves_original_and_validates(setup):
     original = (root / 'data/processed/player_weekly_2023_2025.parquet').read_bytes()
     data, manifest = published(setup)
     assert data.snapshot == manifest
+    with TestClient(create_app(data, PredictionService(data))) as client:
+        assert client.get('/api/health').json()['snapshot']['roster_weeks'] == {'2025': [4]}
     assert len(data.rosters) == 3
     assert data.players.season.eq(2024).any()
     assert (root / 'data/processed/player_weekly_2023_2025.parquet').read_bytes() == original

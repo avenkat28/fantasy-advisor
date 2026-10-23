@@ -53,7 +53,11 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
         models = {p: p in request.app.state.predictions.models for p in ['RB', 'WR']}
         data = request.app.state.data
         available = not data.players.empty and not data.context.empty and (data.snapshot is None or not data.rosters.empty)
-        return dict(status='ok' if all(models.values()) and available else 'degraded', models_available=models, data_available=available, snapshot=data.snapshot)
+        snapshot = None
+        if data.snapshot is not None:
+            snapshot = {**data.snapshot, 'roster_weeks': {str(int(season)): sorted(rows.week.unique().tolist())
+                        for season, rows in data.rosters.groupby('season')} if not data.rosters.empty else {}}
+        return dict(status='ok' if all(models.values()) and available else 'degraded', models_available=models, data_available=available, snapshot=snapshot)
 
     @app.get('/api/players', response_model=list[s.Player])
     def players(request: Request, search: str = '', limit: Limit = 50):

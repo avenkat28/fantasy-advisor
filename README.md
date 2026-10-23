@@ -1,8 +1,8 @@
 # FantasyAdvisor
 
-A personal portfolio project for NFL fantasy football predictions and data-driven start/sit recommendations. The eventual stack is FastAPI, pandas/scikit-learn/XGBoost, PostgreSQL, and Next.js/TypeScript/Tailwind, with possible Sleeper integration.
+A personal portfolio project for NFL fantasy football predictions and data-driven start/sit recommendations. The stack is FastAPI, pandas/scikit-learn/XGBoost, and Next.js/TypeScript/Tailwind, with PostgreSQL and possible Sleeper integration planned.
 
-Tasks 1–3 implement historical weekly data ingestion, leakage-safe player/matchup features, and separately evaluated RB/WR fantasy-point models. Task 4 adds a local FastAPI backend. Database and frontend development remain future work.
+Tasks 1–3 implement historical weekly data ingestion, leakage-safe player/matchup features, and separately evaluated RB/WR fantasy-point models. Task 4 adds a local FastAPI backend. Task 5 adds the Next.js analytics frontend. Database integration remains future work.
 
 ## Setup
 
@@ -159,3 +159,29 @@ Every roster download is stamped with its actual local observation time. Only sn
 The current ppr-v1 model is unchanged: it trained on 2023–2024 and was selected using 2025 weeks 1–9. No calibrated intervals or confidence percentages exist. Missing features and stale history are exposed; preprocessing uses the saved training pipeline. Only saved 2025 weeks 10–18 test records are reported as held-out evaluation. Refreshing input data does not establish model accuracy in 2026: newer held-out evaluation and model retraining remain needed before treating current-season estimates as validated recommendations.
 
 See [current snapshot design and verification](docs/current_data.md) for the publication contract and tests.
+
+## Next.js frontend (Task 5)
+
+A dark, responsive analytics workspace now connects to the FastAPI backend using Next.js App Router, React, TypeScript, Tailwind CSS, Recharts and Lucide React.
+
+Start the backend from the repository root:
+
+```bash
+source .venv312/bin/activate
+uvicorn backend.api.main:app --host localhost --port 8000
+```
+
+Start the frontend in a second terminal (Node 22.16+):
+
+```bash
+cd frontend
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+Open http://localhost:3000. `NEXT_PUBLIC_API_BASE_URL` defaults to `http://localhost:8000`; the explicit backend CORS origin defaults to `http://localhost:3000`. Configure both when using different hosts. Production API addresses must be reachable from the user's browser; no production URL is hardcoded.
+
+Available pages: dashboard `/`, weekly projections `/projections`, player search `/players`, player research `/players/[playerId]`, start/sit `/compare`, and evaluation `/performance`. Selection persists across pages and defaults to actual roster coverage exposed in health metadata. Historical player research and saved evaluation work independently of trained model availability. Projection, ranking and comparison features require the relevant loaded models and valid schedule/roster/history. Missing data produces explicit loading, empty, error and retry states.
+
+Frontend checks, from `frontend/`: `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. Use `npm start` for the production server. `npm run test:e2e` runs optional desktop/mobile Chrome checks against both live services. See [frontend setup, architecture, testing and limitations](frontend/README.md) for details. Backend changes are limited to reporting actual roster-week coverage in `/api/health`; model training and API prediction logic are unchanged by Task 5.

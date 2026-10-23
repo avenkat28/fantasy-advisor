@@ -19,3 +19,7 @@ data/**
 models/
 reports/
 .matplotlib/
+*.tsbuildinfo
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
