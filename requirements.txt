@@ -1,0 +1,13 @@
+# Inference-only deployment dependencies. Local development/training uses
+# backend/requirements-dev.txt, which retains the original training packages.
+fastapi==0.161.1
+uvicorn==0.54.0
+numpy==2.5.4
+pandas==3.0.6
+pyarrow==26.0.0
+scikit-learn==1.9.1
+scipy==1.18.1
+joblib==1.6.0
+# Same XGBoost version and CPU inference API, without CUDA/NCCL on Linux x86_64.
+xgboost-cpu==3.4.1; sys_platform == "linux" and platform_machine == "x86_64"
+xgboost==3.4.1; sys_platform != "linux" or platform_machine != "x86_64"
