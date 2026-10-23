@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "season": 2026,
+  "observed_at": "2026-10-23T19:09:35.938619+00:00",
+  "players": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/players.parquet",
+  "schedules": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/schedules.parquet",
+  "rosters": "data/snapshots/95cad05c8155445cb15d9fc9a890e18d/rosters.parquet",
+  "roster_seasons": [
+    2026
+  ],
+  "sources": [
+    "nflreadpy.load_player_stats",
+    "nflreadpy.load_schedules",
+    "nflreadpy.load_rosters_weekly"
+  ],
+  "latest_statistical_game": "2026-10-22",
+  "rows": {
+    "players": 20645,
+    "schedules": 1127,
+    "rosters": 3500
+  }
+}
