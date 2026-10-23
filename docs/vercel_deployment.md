@@ -1,105 +1,141 @@
-# Deploy entirely on Vercel
+# One Vercel project, one domain
 
-Use two Vercel projects connected to the same GitHub repository:
+This configuration replaces the earlier two-project setup. It retains the existing `frontend/` and `backend/` code; nothing is merged into one source file. Vercel Services builds Next.js and FastAPI independently inside one project, with a shared deployment URL.
 
-| Project | Root Directory | Framework | Purpose |
-| --- | --- | --- | --- |
-| Existing `fantasy-advisor` frontend | `frontend` | Next.js | Existing UI |
-| New `fantasy-advisor-api` backend | Repository root (`./`) | FastAPI | Existing API and model inference |
+| Request | Service | Purpose |
+| --- | --- | --- |
+| `/`, `/players`, `/projections`, `/compare`, `/performance`, Next.js assets | `frontend` (root `frontend`) | Existing UI |
+| `/api/...` | `backend` (root `.`; entrypoint `app:app`) | Existing inference API |
+| `/docs`, `/docs/...`, `/openapi.json`, `/redoc` | `backend` | API documentation |
 
-This moves both services to Vercel without rewriting the API. It does not combine them into one Vercel project. Vercel's Services feature is another possible architecture; this deployment uses the simpler separate-project setup.
+Root `vercel.json` declares `services` and ordered public rewrites. Backend build/function settings are scoped to that service; the frontend has its own npm install/build commands. Rewrites preserve the API path, so `/api/health` reaches FastAPI as `/api/health`.
 
-## 1. Push the deployment files
+## 1. Push the changes
 
 From the repository root:
 
 ```bash
-git add app.py requirements.txt .python-version .vercelignore vercel.json \
-  backend/scripts/check_deployment.py backend/tests/test_deployment.py \
-  docs/vercel_deployment.md README.md
-git commit -m "Prepare inference backend for Vercel"
+git add vercel.json .gitignore .vercelignore README.md \
+  docs/vercel_deployment.md backend/tests/test_deployment.py frontend
+git commit -m "Configure single-project Vercel frontend and API"
 git push origin HEAD
 ```
 
-The published snapshot, two model bundles and evaluation report/test predictions must also be tracked. They were previously force-added for Render. Verify before deploying:
+The previously prepared root `app.py`, `.python-version`, `requirements.txt` and backend preflight script remain necessary. If they have not yet been committed, also stage them:
+
+```bash
+git add app.py .python-version requirements.txt backend/scripts/check_deployment.py
+```
+
+The published snapshot, RB/WR model bundles and evaluation artifacts must be tracked. They were previously force-added for Render; check with:
 
 ```bash
 git ls-files data/current.json data/snapshots models/ppr-v1 reports/ml
 ```
 
-If missing, explicitly add the inference artifacts, not local environments or credentials:
+The API build runs `python -m backend.scripts.check_deployment` and fails if required artifacts are missing. No training or data downloading is performed during requests.
 
-```bash
-git add -f data/current.json data/snapshots/ \
-  models/ppr-v1/RB.joblib models/ppr-v1/WR.joblib \
-  reports/ml/training_report.json reports/ml/test_predictions.csv
-git commit -m "Include inference artifacts"
-git push origin HEAD
-```
+## 2. Configure ONE Vercel project
 
-Do not train models or download NFL datasets during a Vercel request. Refresh locally using the existing command and publish an updated snapshot when needed.
+The safest migration is a new project with a unique name such as `fantasy-advisor-unified`, while the existing UI stays online. Import the same `avenkat28/fantasy-advisor` repository. Alternatively, update the existing frontend project's settings if preserving that project/domain is preferable; its next successful deployment will replace the UI-only deployment.
 
-## 2. Create the new backend project
+Settings for the unified project:
 
-In Vercel, choose Add New → Project, then import `avenkat28/fantasy-advisor` again. Multiple projects can use the same repo.
+- **Root Directory:** repository root, `./`. Never `frontend` or `backend` for this setup.
+- **Application/Framework Preset:** let Vercel detect **Services** from `vercel.json`. Do not force the old FastAPI-only or Next.js-only preset.
+- **Install Command, Build Command, Output Directory:** clear old dashboard overrides. The individual service settings in `vercel.json` own these commands.
+- **Start Command:** none. Vercel manages both runtimes.
+- **Node.js:** use 22.x or newer compatible with the frontend's Node requirement.
+- **Python:** `.python-version` selects 3.12 for the backend.
 
-- Name: `fantasy-advisor-api` (or another available name).
-- Root Directory: repository root, `./`. Do **not** use `backend` or `frontend`.
-- Framework Preset: FastAPI (normally detected from the root requirements).
-- Build Command: use the checked-in `vercel.json` value, `python -m backend.scripts.check_deployment`.
-- Install Command: leave the framework default; Vercel installs root `requirements.txt` automatically.
-- Output Directory: leave the framework default.
-- No Uvicorn Start Command is needed. Vercel invokes the exported ASGI app.
-- Python version: controlled by `.python-version` (`3.12`).
+**Remove `NEXT_PUBLIC_API_BASE_URL` from this project's Production and Preview environments before building.** An inherited Render/second-project/localhost value would direct browser requests outside the unified deployment. With no override, the frontend calls relative `/api/...` URLs and automatically uses the current production or preview domain.
 
-Set this backend environment variable for Production:
+`FANTASY_CORS_ORIGIN` is not required for same-origin browser calls. It can remain configured for an intentional separate local client, but it is not used to connect the two services in the unified setup. Do not add wildcard CORS or protection-bypass secrets. No authentication is added by this migration.
 
-```dotenv
-FANTASY_CORS_ORIGIN=https://fantasy-advisor-omega.vercel.app
-```
+Remove any stale `FANTASY_PLAYERS`, `FANTASY_SCHEDULES` or `FANTASY_MODELS` path overrides from Render. Do not set `FANTASY_LOCAL_API_URL` on Vercel; it is only for a local proxy/test build.
 
-No trailing slash. Don't copy Render path overrides (`FANTASY_PLAYERS`, `FANTASY_SCHEDULES`, `FANTASY_MODELS`) unless intentionally changing the bundled-artifact layout. No secrets are needed for the current public read-only API.
+Deploy. If Vercel reports that a project name already exists, open that existing project or choose a unique name; do not delete a working deployment to resolve a naming conflict. Services is currently a Vercel beta available on all plans. If your dashboard does not recognize `services`, inspect the actual error and use current Vercel tooling rather than switching back to the old `experimentalServices` syntax.
 
-Deploy and use the **actual assigned production URL** from Vercel's Domains settings. The project name does not guarantee a particular domain. Keep production API access public for browser calls; if Deployment Protection requires Vercel sign-in, anonymous API requests will not work. Do not embed a protection-bypass secret in `NEXT_PUBLIC_*` variables. Preview environments need their own deliberate access/CORS setup.
+## 3. Verify the combined deployment
 
-## 3. Verify the backend before switching the frontend
-
-Open these URLs with the actual backend hostname:
+Use its assigned production domain:
 
 ```text
-https://YOUR-API.vercel.app/api/health
-https://YOUR-API.vercel.app/docs
-https://YOUR-API.vercel.app/api/projections?season=2026&week=7&limit=1
+https://YOUR-PROJECT.vercel.app/
+https://YOUR-PROJECT.vercel.app/api/health
+https://YOUR-PROJECT.vercel.app/docs
+https://YOUR-PROJECT.vercel.app/openapi.json
+https://YOUR-PROJECT.vercel.app/api/projections?season=2026&week=7&limit=1
 ```
 
-Health must return `status: "ok"`, both models available, local data available and the expected snapshot metadata. The root `/` can return 404; it is not a UI. Projection availability still depends on roster observation time, freshness and valid schedules. Choose a week with eligible upcoming games at verification time.
+The root must now display the UI. Health must return `status: "ok"`, both models available and the expected data snapshot. Choose a week with eligible upcoming games at verification time; missing rosters or stale data remain explicit API errors. Check the browser Network panel: API requests should use the **same hostname** as the UI, with no calls to Render, a separate backend project or localhost.
 
-Use Vercel Runtime Logs to inspect the elapsed timing added by the prediction service. If builds fail, inspect Build Logs. Missing required artifacts fail the preflight rather than quietly deploying an unusable prediction service. A missing `xgboost-cpu` wheel or bundle-limit error is a packaging failure, not a reason to switch model versions silently.
+Test projections, search, player details, comparison and evaluation on desktop and mobile. Vercel Runtime Logs show backend timing; Build Logs identify per-service build failures. Same-origin preview requests do not require a separate CORS entry for every preview URL. Deployment Protection still applies to the whole deployment and is independent of CORS.
 
-## 4. Switch the existing frontend project
+After the combined deployment works, move the existing custom/production domain to this project if necessary. Keep the old frontend/backend/Render projects until that verification is complete. Deleting old services is a separate action; these code changes delete no hosted projects.
 
-In the existing frontend project's Settings → Environment Variables, change Production:
+## Local development and checks
 
-```dotenv
-NEXT_PUBLIC_API_BASE_URL=https://YOUR-API.vercel.app
+The normal two-terminal local workflow still works:
+
+```bash
+# Repository root
+source .venv312/bin/activate
+uvicorn backend.api.main:app --host localhost --port 8000
+
+# Another terminal
+cd frontend
+npm ci
+npm run dev
 ```
 
-Use the full HTTPS origin, without a trailing `/api`. Redeploy the frontend after saving: `NEXT_PUBLIC_*` values are embedded at build time. Keep its Root Directory `frontend` and framework Next.js. The repository-root FastAPI configuration belongs to the new API project; do not point the existing UI project at the repository root.
+Open http://localhost:3000. The browser calls that origin's `/api` URLs; Next.js proxies local development API requests to localhost:8000. If an old `frontend/.env.local` contains `NEXT_PUBLIC_API_BASE_URL`, remove that line to exercise the same-origin proxy. The variable remains an explicit optional override for an intentionally split deployment.
 
-Test dashboard, projections, search, player details, comparison and historical model evaluation through `https://fantasy-advisor-omega.vercel.app`. Verify browser network requests now target Vercel rather than Render and check for CORS or authentication failures.
+```bash
+MPLCONFIGDIR=.matplotlib python -m pytest backend/tests -q
+cd frontend
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-## 5. Retire Render after verification
+A normal production Next.js build has no localhost rewrite. `FANTASY_LOCAL_API_URL` can explicitly enable a backend proxy for a local integration-test build; do not set it in a hosted environment.
 
-Keep Render until all pages work against the new API and measured cold/warm response times are acceptable. Once verified, suspend/delete only the old Render backend if desired. No model retraining or data regeneration is required for migration.
+Vercel's own combined local runner is also supported with current CLI tooling:
 
-## Packaging and verification details
+```bash
+npx vercel@latest dev --local
+```
 
-`app.py` exports the exact existing `backend.api.main.app`. Root `requirements.txt` is inference-only; `backend/requirements*.txt` remain the local/training dependency lists. The Linux x86_64 deployment uses official `xgboost-cpu==3.4.1` instead of the CUDA/NCCL-enabled distribution. The same model version and CPU inference interface are retained. Other platforms use the original distribution at the same version. Training utilities, nflreadpy, matplotlib and Polars are not part of the deployment requirements.
+It detects both services, routes docs/API/UI through one URL, and requires no account login in local mode. The CLI prefers a conventional `.venv`/`venv` in the service root: it may select an old Python environment instead of `.venv312`. Use a compatible Python 3.12 environment for that runner. Do not overwrite an existing environment blindly. The combined configuration was exercised in an isolated checkout with its `.venv` pointing at the compatible environment.
 
-`vercel.json` uses the FastAPI preset, a 60-second function limit, and function-bundle exclusions for frontend assets, unused plot files and raw/processed data outside the published snapshot, local environments and caches. It does not exclude the published snapshots, RB/WR model bundles, training evaluation report or test prediction CSV. The source directories are not mounted as public static assets. `.vercelignore` also prevents local environments and credentials from entering CLI upload source.
+Run the optional browser suite against a combined local runner or a local test server:
 
-The Linux CPython 3.12 wheels and transitive dependencies were downloaded and inspected: about **444.6 MB uncompressed**, before the small source/data/model artifacts and Vercel runtime overhead. This is an estimate, not a completed Vercel bundle; the actual build enforces the standard 500 MB limit. Vercel may change dependency resolution or runtime overhead. The Linux CPU package's real model inference has not been executed in this macOS environment (Docker's daemon was unavailable); verify the Vercel health/projection endpoints before switching traffic. Local startup/preflight and the 84-test offline backend suite passed with the existing CPU-only macOS runtime.
+```bash
+cd frontend
+npm run test:e2e
+```
 
-The hosting platform does not change the model's statistical accuracy or add security features to application code. Cold starts, usage limits and data freshness still apply. The frontend retains its 30-second request timeout, so verify complete requests meet that budget. Memory/feature caches are reused only within warm function instances; they are not durable storage. Snapshots must be refreshed/redeployed or stored externally, not updated in the read-only deployed source at request time. A Vercel Hobby deployment is not a guarantee of unlimited free compute or particular latency.
+Set `FRONTEND_TEST_URL` to another combined URL. `API_TEST_BASE_URL` is available only if the Playwright setup requests need another base URL. Browser assertions verify that UI API requests actually remain same-origin. Chrome must be installed. The regular Vitest/backend tests are offline; browser checks require running services and real artifacts.
 
-References: [Vercel FastAPI](https://vercel.com/docs/frameworks/backend/fastapi), [Python runtime](https://vercel.com/docs/functions/runtimes/python), [function limits](https://vercel.com/docs/functions/limitations), and [official XGBoost CPU installation](https://xgboost.readthedocs.io/en/stable/install.html).
+## Runtime packaging and limitations
+
+Root requirements remain inference-only. On Linux x86_64, official `xgboost-cpu==3.4.1` retains the same CPU inference API and model version while omitting CUDA/NCCL. Original development/training requirements are unchanged. Runtime function exclusions remove frontend source from the Python bundle, raw/processed data outside the published snapshot, plot files, local environments and caches. They preserve published snapshots, the RB/WR bundles, the evaluation report and test prediction CSV. Exclusion patterns remain under Vercel's 256-character validation limit.
+
+The downloaded Linux CPython 3.12 dependencies total about **444.6 MB uncompressed**, before small source/artifacts and Vercel runtime overhead. The cloud build must still confirm the final bundle fits the standard 500 MB limit. The actual Linux CPU inference runtime and live Vercel latency require cloud verification; the local runner uses the existing CPU-only macOS XGBoost runtime. No model retraining, feature simplification, confidence fabrication or freshness-rule relaxation is part of this migration.
+
+Services is beta and subject to Vercel Hobby compute/usage limits and cold starts. One project does not mean unlimited free hosting or eliminate the Python computation. The browser still has a 30-second request timeout. Memory caches belong to warm function instances and are not durable storage. Continue refreshing snapshots locally and redeploying them, or add verified external storage later. Do not write source snapshots during an API request.
+
+References: [Services overview](https://vercel.com/docs/services), [routing](https://vercel.com/docs/services/routing), [service configuration](https://vercel.com/docs/services/config-reference), [function limits](https://vercel.com/docs/functions/limitations), and [XGBoost CPU installation](https://xgboost.readthedocs.io/en/stable/install.html).
+
+## Verification for this change
+
+- Backend: 95 tests passed, including service routing and configuration-length regressions.
+- Frontend: 22 unit/component tests passed; TypeScript and ESLint passed.
+- Production Next.js build passed with a same-origin API base and no local proxy enabled.
+- Vercel CLI 65.2.0 detected and started both services in local mode.
+- Six real Chrome desktop/mobile checks passed through that runner: application workflows, unavailable-week handling, shared-origin API calls, Swagger/OpenAPI, and API 404 routing.
+- Artifact preflight passed with the existing real models and snapshot.
+
+These are local checks. No Vercel project was created, changed, deleted or deployed by this task. Cloud bundle size, Linux CPU runtime and live latency still need verification after the Git push/deployment.

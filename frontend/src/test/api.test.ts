@@ -8,7 +8,7 @@ describe("typed HTTP client", () => {
       .mockResolvedValue(new Response(JSON.stringify([])));
     await api.players("A & B");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/players?search=A+%26+B&limit=50",
+      "/api/players?search=A+%26+B&limit=50",
       expect.objectContaining({ cache: "no-store" }),
     );
   });

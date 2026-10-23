@@ -10,13 +10,13 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. The `.env.example` contains:
+Open http://localhost:3000. The `.env.example` documents an optional override. For the unified deployment, leave it unset:
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+# NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-This is a browser-visible API URL, not a secret. Restart Next.js after changing it; public variables are embedded during production build. Do not place credentials in it. Production deployments need a browser-reachable HTTPS backend and a matching explicit backend CORS origin. No hosted deployment or authentication is configured in this task.
+The default is same-origin `/api` requests. Local Next.js development proxies these requests to FastAPI at localhost:8000; Vercel Services routes them to Python in production. Remove an old `NEXT_PUBLIC_API_BASE_URL` line from `.env.local` and remove the variable from the unified Vercel project. An explicit browser-visible URL remains optional for an intentionally separate backend, which requires matching CORS. Never place credentials in public variables. Restart/rebuild after changing them.
 
 In another terminal, from the **repository root**:
 
@@ -26,7 +26,7 @@ python -m pip install -r backend/requirements-dev.txt
 uvicorn backend.api.main:app --host localhost --port 8000
 ```
 
-The default backend CORS origin is `http://localhost:3000`. Use that frontend hostname consistently. If using a different origin, set `FANTASY_CORS_ORIGIN` for FastAPI. API docs: http://localhost:8000/docs.
+The browser calls http://localhost:3000/api through a development proxy, so local API calls are same-origin. FastAPI also keeps its explicit local CORS setting for direct split-client development. API docs are at http://localhost:8000/docs. In the unified Vercel deployment, `/docs` and `/openapi.json` share the UI domain.
 
 ## Pages
 
@@ -57,15 +57,15 @@ npm start
 
 The lockfile pins the resolved dependency tree. Vitest/Testing Library tests are offline and contain the only synthetic player data. Coverage includes dashboard rendering, navigation, selected-week persistence, player search/retry, null/empty/error handling, projection sorting/search, excluded players, backend comparison decisions, historical research without a model, actual metrics rendering, and typed HTTP error handling.
 
-The build and dev commands use Next.js's supported Webpack mode because Turbopack worker socket creation failed in the development sandbox. No runtime functionality depends on Turbopack. Run `npm start` after a successful build for a production server.
+The standalone build and dev commands use Next.js's supported Webpack mode because Turbopack worker socket creation failed in the development sandbox. Vercel's own local Services runner may start its framework dev integration independently. No runtime functionality depends on Turbopack. Run `npm start` after a successful build for a production server.
 
-Optional live browser checks require both services running, real model/data artifacts, and an installed Google Chrome:
+Optional live browser checks require a combined Services runner (see the deployment guide), real model/data artifacts, and an installed Google Chrome:
 
 ```bash
 npm run test:e2e
 ```
 
-Playwright uses desktop Chrome and a mobile viewport, checks real backend integration across pages, and verifies an unpublished week produces an error. It discovers players/week from the loaded snapshot instead of fixed player fixtures. Set `FRONTEND_TEST_URL` for a different frontend URL and `NEXT_PUBLIC_API_BASE_URL` for the backend. Install Chrome or change the Playwright channel to a locally available Chromium installation on another machine. Browser tests are separate from offline unit tests.
+Playwright uses desktop Chrome and a mobile viewport, checks real backend integration across pages, and verifies an unpublished week produces an error. It discovers players/week from the loaded snapshot instead of fixed player fixtures. Set `FRONTEND_TEST_URL` for a different combined URL; Playwright setup requests use that same URL by default. Browser checks assert that API requests stay on the UI origin. Install Chrome or change the Playwright channel to a locally available Chromium installation on another machine. Browser tests are separate from offline unit tests.
 
 ## Data limitations
 
@@ -73,4 +73,4 @@ The current snapshot supports upcoming 2026 week 7 games. Week 8 roster coverage
 
 Profile recent averages describe up to five latest recorded appearances, not necessarily the pregame history for the selected week. They are labeled separately from projections and can include postseason games. Missing scores render `—`; no values are invented. Historical accuracy comes exclusively from saved held-out predictions and is empty for players outside the original test split.
 
-The frontend does not add injury reporting, verified game-day availability, calibrated confidence, automatic data refresh, authentication, payments, betting or roster synchronization. Current ppr-v1 accuracy is historical, not 2026 validation. Confirm current-source coverage, implement a verified injury/availability feed, and evaluate/retrain on newer held-out games before presenting current-season estimates as validated recommendations. Browser API calls cannot use a backend reachable only on a developer's loopback address in a hosted deployment.
+The frontend does not add injury reporting, verified game-day availability, calibrated confidence, automatic data refresh, authentication, payments, betting or roster synchronization. Current ppr-v1 accuracy is historical, not 2026 validation. Confirm current-source coverage, implement a verified injury/availability feed, and evaluate/retrain on newer held-out games before presenting current-season estimates as validated recommendations. Do not set `FANTASY_LOCAL_API_URL` in Vercel; it is only an explicit local integration-test proxy setting. See [single-project deployment](../docs/vercel_deployment.md) for the current hosting setup.

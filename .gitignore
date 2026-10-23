@@ -23,3 +23,5 @@ reports/
 frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
+
+.vercel/

@@ -1,11 +1,61 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "fastapi",
-  "buildCommand": "python -m backend.scripts.check_deployment",
-  "functions": {
-    "app.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{frontend/**,backend/tests/**,docs/**,data/{raw,processed}/**,models/**/*_ridge.joblib,reports/**/*.png,.venv*/**,.python/**,.cache/**,.pytest_cache/**,.matplotlib/**,.git/**,.agents/**,.codex/**,.aws/**,**/__pycache__/**,**/*.pyc}"
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "nextjs",
+      "installCommand": "npm ci",
+      "buildCommand": "npm run build"
+    },
+    "backend": {
+      "root": ".",
+      "framework": "fastapi",
+      "entrypoint": "app:app",
+      "buildCommand": "python -m backend.scripts.check_deployment",
+      "functions": {
+        "app.py": {
+          "maxDuration": 60,
+          "excludeFiles": "{frontend/**,backend/tests/**,docs/**,data/{raw,processed}/**,models/**/*_ridge.joblib,reports/**/*.png,.venv*/**,.python/**,.cache/**,.pytest_cache/**,.matplotlib/**,.git/**,.vercel/**,.agents/**,.codex/**,.aws/**,**/__pycache__/**,**/*.pyc}"
+        }
+      }
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/docs",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/docs/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/openapi.json",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/redoc",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
 }

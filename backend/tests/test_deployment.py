@@ -37,3 +37,35 @@ def test_preflight_rejects_mixed_source_overrides(setup, monkeypatch):
     monkeypatch.setenv('FANTASY_PLAYERS', str(data.players_path))
     with pytest.raises(ValueError, match='remove FANTASY_PLAYERS'):
         check_deployment(data.root)
+
+
+@pytest.mark.parametrize('path,expected', [
+    ('/', 'frontend'), ('/players/example', 'frontend'),
+    ('/projections', 'frontend'), ('/api/health', 'backend'),
+    ('/api/projections', 'backend'), ('/api/unknown', 'backend'),
+    ('/docs', 'backend'), ('/docs/oauth2-redirect', 'backend'),
+    ('/openapi.json', 'backend'), ('/redoc', 'backend'),
+])
+def test_single_project_public_routing(path, expected):
+    import json
+    import re
+    from backend.scripts.build_player_stats import ROOT
+    configuration = json.loads((ROOT / 'vercel.json').read_text())
+    for rule in configuration['rewrites']:
+        if re.fullmatch(rule['source'], path):
+            assert rule['destination']['service'] == expected
+            break
+    else:
+        pytest.fail(f'No service owns {path}')
+
+
+def test_services_config_keeps_runtime_settings_scoped_and_within_vercel_limits():
+    import json
+    from backend.scripts.build_player_stats import ROOT
+    configuration = json.loads((ROOT / 'vercel.json').read_text())
+    for key in ['framework', 'buildCommand', 'installCommand', 'functions']:
+        assert key not in configuration
+    for service in configuration['services'].values():
+        assert (ROOT / service['root']).is_dir()
+        for options in service.get('functions', {}).values():
+            assert len(options.get('excludeFiles', '')) <= 256

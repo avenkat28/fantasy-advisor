@@ -180,7 +180,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. `NEXT_PUBLIC_API_BASE_URL` defaults to `http://localhost:8000`; the explicit backend CORS origin defaults to `http://localhost:3000`. Configure both when using different hosts. Production API addresses must be reachable from the user's browser; no production URL is hardcoded.
+Open http://localhost:3000. The frontend defaults to same-origin `/api` requests. Local Next.js development proxies these to `http://localhost:8000`; the unified Vercel deployment routes them to its Python service. Remove an old `NEXT_PUBLIC_API_BASE_URL` override to use this setup. An explicit URL remains available for intentionally separate deployments.
 
 Available pages: dashboard `/`, weekly projections `/projections`, player search `/players`, player research `/players/[playerId]`, start/sit `/compare`, and evaluation `/performance`. Selection persists across pages and defaults to actual roster coverage exposed in health metadata. Historical player research and saved evaluation work independently of trained model availability. Projection, ranking and comparison features require the relevant loaded models and valid schedule/roster/history. Missing data produces explicit loading, empty, error and retry states.
 
@@ -192,10 +192,12 @@ Weekly requests batch model inference once per position and reuse player/roster 
 
 A local before/after comparison on the real 2026 week 7 snapshot measured 6.63 seconds versus 1.71 seconds for a cold weekly request, with all 225 projection values matching within 0.000001 PPR and all unavailable reasons matching. Warm requests measured about 0.72 seconds locally. Hosting timings depend on available CPU and memory; these are not guarantees for Render's free tier. The 78-test backend suite includes grouped-window equivalence, batched-vs-individual inference, concurrent feature caching, and the original leakage tests. Redeploy the backend after pushing the performance changes; model/data artifacts do not need to be regenerated.
 
-## Deploy both services on Vercel
+## One-project Vercel deployment
 
-The repository now includes a Vercel-ready inference backend: root `app.py`, `.python-version`, `requirements.txt`, `.vercelignore`, and `vercel.json`. Keep the existing Next.js project rooted at `frontend`; create a second Vercel project rooted at the repository root using the FastAPI preset. Root requirements omit training/download tools and use the official same-version CPU-only XGBoost package on Linux x86_64 to avoid CUDA/NCCL dependencies. Original development/training requirements remain unchanged.
+Root `vercel.json` now declares Vercel Services: a Next.js service rooted at `frontend` and a FastAPI service rooted at `.`. Ordered rewrites send `/api/...` and API docs to Python and UI routes/assets to Next.js. They share one project, deployment, and domain. Existing frontend/backend folders, models, and features are preserved.
 
-The backend build runs `python -m backend.scripts.check_deployment` and fails if the published snapshot, models or evaluation artifacts are missing. All artifacts must be committed before deployment. After the new API passes health and projection checks, point the existing frontend's `NEXT_PUBLIC_API_BASE_URL` at its assigned Vercel domain and redeploy the frontend. Set backend `FANTASY_CORS_ORIGIN` to the exact frontend production origin. Keep Render running until the migration is verified.
+Use the repository root `./` for this Vercel project, let it detect Services, and clear old dashboard build/install/output overrides. **Remove `NEXT_PUBLIC_API_BASE_URL` from Production and Preview** so browser requests use the current deployment's `/api` routes. No separate backend hostname or production CORS entry is needed for same-origin calls. Keep old deployments until the replacement is verified.
 
-See the [complete Vercel deployment steps](docs/vercel_deployment.md), including Git commands, dashboard settings, troubleshooting and verification limits. The estimated Linux inference dependency size is 444.6 MB uncompressed; the actual Vercel build must confirm that runtime overhead plus artifacts fit the standard bundle limit. All 84 offline backend tests pass locally; live Vercel performance and the Linux CPU model runtime still require deployment verification.
+The Python service uses the existing root inference requirements, `app.py`, `.python-version`, and deployment preflight. Its scoped function exclusions stay below the 256-character configuration limit. Downloaded Linux dependencies measured 444.6 MB uncompressed; the actual Vercel build/runtime still needs verification against the bundle and request-time limits. Services is currently beta on all plans.
+
+See the [single-project deployment guide](docs/vercel_deployment.md) for exact dashboard settings, push commands, local development, and verification. The normal two-terminal local workflow remains available; Next.js now proxies local `/api` calls to FastAPI. Deployment doesn't retrain models or change their accuracy safeguards.

@@ -5,7 +5,10 @@ test("research, projections, comparisons and evaluation use the live backend", a
   page,
   request,
 }) => {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const base =
+    process.env.API_TEST_BASE_URL ||
+    process.env.FRONTEND_TEST_URL ||
+    "http://localhost:3000";
   const health = await (await request.get(`${base}/api/health`)).json();
   const season = health.snapshot.season;
   const week = Math.max(...health.snapshot.roster_weeks[String(season)]);
@@ -18,6 +21,11 @@ test("research, projections, comparisons and evaluation use the live backend", a
   expect(first).toBeTruthy();
   expect(second).toBeTruthy();
   const pageErrors: string[] = [];
+  const apiOrigins = new Set<string>();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/")) apiOrigins.add(url.origin);
+  });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
   await expect(
@@ -87,13 +95,17 @@ test("research, projections, comparisons and evaluation use the live backend", a
   await expect(page.getByRole("table")).toContainText("xgboost");
   await expect(page.locator(".recharts-surface").first()).toBeVisible();
   expect(pageErrors).toEqual([]);
+  expect([...apiOrigins]).toEqual([new URL(page.url()).origin]);
 });
 
 test("unpublished week gives an actionable error, not fabricated projections", async ({
   page,
   request,
 }) => {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const base =
+    process.env.API_TEST_BASE_URL ||
+    process.env.FRONTEND_TEST_URL ||
+    "http://localhost:3000";
   const health = await (await request.get(`${base}/api/health`)).json();
   const missingWeek = Array.from({ length: 18 }, (_, i) => i + 1).find(
     (w) =>
@@ -108,4 +120,23 @@ test("unpublished week gives an actionable error, not fabricated projections", a
   );
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.getByRole("table")).toHaveCount(0);
+});
+
+test("one domain serves the UI, API, and API documentation", async ({
+  request,
+}) => {
+  const health = await request.get("/api/health");
+  expect(health.ok()).toBeTruthy();
+  expect((await health.json()).application).toBe("FantasyAdvisor");
+  const docs = await request.get("/docs");
+  expect(docs.ok()).toBeTruthy();
+  expect(await docs.text()).toContain("SwaggerUIBundle");
+  const schema = await request.get("/openapi.json");
+  expect((await schema.json()).paths).toHaveProperty("/api/projections");
+  const missing = await request.get("/api/route-that-does-not-exist");
+  expect(missing.status()).toBe(404);
+  expect(missing.headers()["content-type"]).toContain("application/json");
+  const ui = await request.get("/players");
+  expect(ui.ok()).toBeTruthy();
+  expect(ui.headers()["content-type"]).toContain("text/html");
 });
