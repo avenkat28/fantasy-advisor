@@ -4,6 +4,8 @@ from functools import lru_cache
 import logging
 import os
 from pathlib import Path
+from threading import RLock
+from time import perf_counter
 
 import joblib
 import numpy as np
@@ -13,7 +15,7 @@ from backend.api.data import APIError, DataRepository
 from backend.ml.schema import FEATURES, feature_frame
 from backend.scripts.build_features import build_features
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('uvicorn.error')
 ELIGIBILITY = 'Published seasons use the requested weekly roster with source status ACT, observed before the game (maximum age 7 days), plus at least one earlier career appearance. Seasons through 2025 without roster snapshots use earlier same-season appearances. Membership does not verify game availability.'
 
 
@@ -68,6 +70,7 @@ class PredictionService:
         self.data = repository
         directory = model_dir or Path(os.getenv('FANTASY_MODELS', str(repository.root / 'models/ppr-v1')))
         self.models = {}
+        self._feature_lock = RLock()
         for position in ['RB', 'WR']:
             path = directory / f'{position}.joblib'
             if path.exists():
@@ -89,20 +92,37 @@ class PredictionService:
             raise APIError(404, 'schedule_not_found', 'No regular-season schedule found for this season/week in the local snapshot.')
         return games
 
-    @lru_cache(maxsize=32)
     def day_features(self, season: int, week: int, date: str) -> pd.DataFrame:
+        # lru_cache alone can compute the same cold key in several request threads.
+        with self._feature_lock:
+            return self._day_features(season, week, date)
+
+    @lru_cache(maxsize=32)
+    def _day_features(self, season: int, week: int, date: str) -> pd.DataFrame:
         games = self.schedule(season, week)
         cutoff = pd.Timestamp(date)
         return pregame_rows(self.data.players, self.data.schedules, games[games.game_date.eq(cutoff)], cutoff,
                             self.data.candidates(season, week, cutoff))
 
-    def project(self, player_id: str, season: int, week: int) -> dict:
-        records = self.data.records(player_id)
-        games = self.schedule(season, week)
+    def _prepare(self, player_id: str, season: int, week: int,
+                 lookups: dict | None = None) -> tuple[dict, pd.DataFrame]:
+        # A weekly request shares immutable snapshot lookups, not eligibility decisions
+        # across requests. This avoids rescanning all player/roster rows per candidate.
+        records = (self.data.records(player_id) if lookups is None else
+                   lookups['records'].get(player_id, self.data.players.iloc[:0]))
+        games = self.schedule(season, week) if lookups is None else lookups['games']
+
+        def roster_at(cutoff: pd.Timestamp) -> pd.DataFrame:
+            if lookups is None:
+                return self.data.roster_for_week(season, week, cutoff)
+            key = pd.Timestamp(cutoff)
+            if key not in lookups['rosters']:
+                lookups['rosters'][key] = self.data.roster_for_week(season, week, cutoff)
+            return lookups['rosters'][key]
         roster_based = self.data.roster_season(season)
         if roster_based:
             # Resolve the team from the weekly snapshot, then enforce its actual game's cutoff.
-            roster = self.data.roster_for_week(season, week, games.game_date.max())
+            roster = roster_at(games.game_date.max())
             selected = roster[roster.player_id.eq(player_id)] if not roster.empty else roster
             if selected.empty:
                 raise APIError(422, 'roster_unavailable', 'Player has no fresh observed roster record for the requested week.')
@@ -126,7 +146,7 @@ class PredictionService:
             raise APIError(404, 'matchup_not_found', 'No scheduled matchup for the most recently observed team (possibly a bye).')
         game = matchup.iloc[0]
         if roster_based:
-            known = self.data.roster_for_week(season, week, game.game_date)
+            known = roster_at(game.game_date)
             known = known[known.player_id.eq(player_id)] if not known.empty else known
             if known.empty:
                 raise APIError(422, 'roster_unavailable', 'Weekly roster was not observed before this game cutoff.')
@@ -145,9 +165,6 @@ class PredictionService:
         own = records[records.game_date < game.game_date]
         inputs = feature_frame(pd.DataFrame([row[FEATURES].to_dict()], dtype=float), strict=True)
         bundle = self.models[position]
-        value = float(bundle['model'].predict(inputs)[0])
-        if not np.isfinite(value):
-            raise ValueError('Nonfinite model prediction')
         as_of = pd.Timestamp(game.game_date).isoformat() + 'Z'
         feature_cutoff = as_of
         if self.data.snapshot:
@@ -164,7 +181,7 @@ class PredictionService:
         if (game.game_date - own.game_date.max()).days > 28:
             limits.append('Player statistics are more than 28 days old.')
         return dict(**self.data.identity(last), season=season, week=week, opponent=str(game.opponent_team),
-                    projected_ppr_points=value, model_version=bundle['metadata']['version'], prediction_type='pregame',
+                    model_version=bundle['metadata']['version'], prediction_type='pregame',
                     prediction_timestamp=datetime.now(timezone.utc).isoformat(), data_as_of=as_of, feature_cutoff=feature_cutoff,
                     last_statistical_game=last_date, historical_games=int(row.prior_games),
                     missing_features=inputs.columns[inputs.isna().iloc[0]].tolist(),
@@ -175,9 +192,20 @@ class PredictionService:
                     roster_status=str(last.roster_status) if roster_based else None,
                     roster_observed_at=last.observed_at.isoformat() if roster_based else None,
                     snapshot_observed_at=self.data.snapshot.get('observed_at') if self.data.snapshot else None,
-                    limitations=limits)
+                    limitations=limits), inputs
+
+    def _predict(self, position: str, inputs: pd.DataFrame) -> np.ndarray:
+        values = np.asarray(self.models[position]['model'].predict(inputs), dtype=float)
+        if values.shape != (len(inputs),) or not np.isfinite(values).all():
+            raise ValueError('Invalid model prediction output')
+        return values
+
+    def project(self, player_id: str, season: int, week: int) -> dict:
+        metadata, inputs = self._prepare(player_id, season, week)
+        return {**metadata, 'projected_ppr_points': float(self._predict(metadata['position'], inputs)[0])}
 
     def weekly(self, season: int, week: int, position: str | None) -> tuple[list, list]:
+        started = perf_counter()
         games = self.schedule(season, week)
         if self.data.roster_season(season):
             latest = self.data.roster_for_week(season, week, games.game_date.max())
@@ -187,10 +215,23 @@ class PredictionService:
             latest = self.data.candidates(season, week, games.game_date.min())
         latest = latest[latest.position.isin([position] if position else ['RB', 'WR'])]
         predictions, unavailable = [], []
+        prepared = {'RB': [], 'WR': []}
+        history = self.data.players[self.data.players.player_id.isin(latest.player_id)].sort_values('game_date')
+        lookups = {'games': games, 'records': dict(tuple(history.groupby('player_id', sort=False))), 'rosters': {}}
         for player_id in latest.player_id:
             try:
-                predictions.append(self.project(str(player_id), season, week))
+                metadata, inputs = self._prepare(str(player_id), season, week, lookups)
+                prepared[metadata['position']].append((metadata, inputs))
             except APIError as error:
                 unavailable.append(dict(player_id=player_id, code=error.code, message=error.message))
+        for player_position, records in prepared.items():
+            if not records:
+                continue
+            # One inference call per position, rather than one per player.
+            values = self._predict(player_position, pd.concat([inputs for _, inputs in records], ignore_index=True))
+            predictions.extend({**metadata, 'projected_ppr_points': float(value)}
+                               for (metadata, _), value in zip(records, values))
         predictions.sort(key=lambda p: p['projected_ppr_points'], reverse=True)
+        logger.info('Weekly projections season=%s week=%s position=%s projected=%s unavailable=%s elapsed=%.3fs',
+                    season, week, position or 'ALL', len(predictions), len(unavailable), perf_counter() - started)
         return predictions, unavailable

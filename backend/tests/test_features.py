@@ -188,3 +188,25 @@ def test_generated_features():
     keys = ['player_id', 'season', 'season_type', 'week']
     joined = features.merge(players[keys + ['fantasy_points_ppr']], on=keys, validate='one_to_one')
     pd.testing.assert_series_equal(joined[TARGET], joined.fantasy_points_ppr, check_names=False)
+
+
+def test_vectorized_rolling_matches_original_with_groups_nulls_and_unsorted_indices():
+    """Performance refactor must preserve the original shift-before-rolling contract."""
+    import numpy as np
+    from backend.scripts.build_features import prior_rolling
+
+    rng = np.random.default_rng(42)
+    frame = pd.DataFrame({
+        'player': rng.choice(['a', 'b', 'c', 'd'], 100),
+        'position': rng.choice(['RB', 'WR'], 100),
+        'points': rng.normal(size=100),
+    }, index=rng.permutation(100))
+    frame.loc[frame.index[::7], 'points'] = np.nan
+    for groups in [['player'], ['player', 'position']]:
+        for window in [3, 5, 10]:
+            for std in [False, True]:
+                expected = frame.groupby(groups, sort=False).points.transform(
+                    lambda values: getattr(values.shift(1).rolling(window, min_periods=2 if std else 1),
+                                           'std' if std else 'mean')())
+                actual = prior_rolling(frame, groups, 'points', window, std)
+                pd.testing.assert_series_equal(actual, expected, atol=1e-12, rtol=1e-12)

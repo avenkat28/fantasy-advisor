@@ -170,3 +170,43 @@ def test_unsupported_bye_and_internal_errors(setup):
     data.context = data.context[~(data.context.week.eq(4) & data.context.team.eq('KC'))]
     with TestClient(create_app(data, service)) as c:
         assert c.get('/api/projections/a?season=2025&week=4').status_code == 404
+
+
+def test_weekly_batches_inference_by_position_and_preserves_individual_results(setup):
+    from unittest.mock import patch
+    data, service, _ = setup
+    clone = data.players[data.players.player_id.eq('a')].copy()
+    clone['player_id'] = 'a2'
+    clone['player_name'] = 'Second receiver'
+    clone['fantasy_points_ppr'] += 5
+    data.players = pd.concat([data.players, clone], ignore_index=True)
+
+    class HistoryModel:
+        def predict(self, frame):
+            return frame.previous_fantasy_points_ppr.to_numpy() / 10
+
+    service.models['WR']['model'] = HistoryModel()
+    service.models['RB']['model'] = HistoryModel()
+    with patch.object(service.models['WR']['model'], 'predict', wraps=service.models['WR']['model'].predict) as wr_predict, \
+         patch.object(service.models['RB']['model'], 'predict', wraps=service.models['RB']['model'].predict) as rb_predict:
+        projections, unavailable = service.weekly(2025, 4, None)
+        assert not unavailable
+        assert wr_predict.call_count == rb_predict.call_count == 1
+        assert len(wr_predict.call_args.args[0]) == 2
+        assert len(rb_predict.call_args.args[0]) == 1
+    for projection in projections:
+        individual = service.project(projection['player_id'], 2025, 4)
+        assert projection['projected_ppr_points'] == individual['projected_ppr_points']
+        assert projection['historical_games'] == individual['historical_games']
+
+
+def test_concurrent_cold_feature_requests_build_once(setup):
+    from concurrent.futures import ThreadPoolExecutor
+    from unittest.mock import patch
+    from backend.api.predictions import pregame_rows
+    _, service, _ = setup
+    with patch('backend.api.predictions.pregame_rows', wraps=pregame_rows) as build:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            results = list(pool.map(lambda _: service.day_features(2025, 4, '2025-09-29'), range(3)))
+        assert build.call_count == 1
+        assert all(result is results[0] for result in results)

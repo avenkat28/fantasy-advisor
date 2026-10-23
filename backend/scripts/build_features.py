@@ -52,10 +52,15 @@ def schedule_context(players: pd.DataFrame, schedules: pd.DataFrame) -> tuple[pd
 
 def prior_rolling(frame: pd.DataFrame, groups: list[str], column: str, window: int, std: bool = False) -> pd.Series:
     """Shift within a group BEFORE rolling; missing observations are never imputed."""
-    return frame.groupby(groups, sort=False)[column].transform(
-        lambda values: getattr(values.shift(1).rolling(window, min_periods=2 if std else 1),
-                               "std" if std else "mean")()
-    )
+    grouped = frame.groupby(groups, sort=False)
+    shifted = grouped[column].shift(1)
+    windows = shifted.groupby([frame[key] for key in groups], sort=False).rolling(
+        window, min_periods=2 if std else 1)
+    result = windows.std() if std else windows.mean()
+    # Grouped rolling returns group keys plus the original row index. Restore
+    # source order explicitly; no Python callback is needed for each player.
+    return result.droplevel(list(range(len(groups)))).reindex(frame.index)
+
 
 
 def known_sum(values: pd.Series) -> float:
