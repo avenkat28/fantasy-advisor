@@ -32,6 +32,8 @@ class DataRepository:
             self.rosters['observed_at'] = pd.to_datetime(self.rosters.observed_at, utc=True)
         self.players = pd.read_parquet(self.players_path) if self.players_path.exists() else pd.DataFrame()
         self.schedules = pd.read_parquet(self.schedule_path) if self.schedule_path.exists() else pd.DataFrame()
+        injury_path = root / self.snapshot['injuries'] if self.snapshot and self.snapshot.get('injuries') else None
+        self.injuries = pd.read_parquet(injury_path) if injury_path and injury_path.exists() else pd.DataFrame()
         self.context = pd.DataFrame()
         if not self.players.empty and not self.schedules.empty:
             self.players, self.context = schedule_context(self.players, self.schedules)
@@ -58,6 +60,13 @@ class DataRepository:
         if cutoff is not None:
             available = min(available, pd.Timestamp(cutoff).tz_localize('UTC'))
         rows = self.rosters[self.rosters.season.eq(season) & self.rosters.week.eq(week) & self.rosters.observed_at.le(available)]
+        # Upcoming-week previews may use the latest observed roster, explicitly labeled.
+        now = pd.Timestamp.now(tz='UTC')
+        if rows.empty and cutoff is not None and now < pd.Timestamp(cutoff).tz_localize('UTC') <= now + pd.Timedelta(days=14):
+            rows = self.rosters[self.rosters.season.eq(season) & self.rosters.week.lt(week)
+                                & self.rosters.observed_at.le(now) & self.rosters.observed_at.ge(now - pd.Timedelta(days=7))]
+            if not rows.empty:
+                rows = rows[rows.week.eq(rows.week.max())]
         # Do not silently carry an old roster snapshot indefinitely.
         rows = rows[rows.observed_at.ge(available - pd.Timedelta(days=7))]
         return rows.sort_values('observed_at').drop_duplicates('player_id', keep='last')

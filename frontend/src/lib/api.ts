@@ -1,5 +1,6 @@
 import type {
   Comparison,
+  WeeklyResults,
   Health,
   Performance,
   Player,
@@ -66,6 +67,7 @@ async function get<T>(
   return response.json() as Promise<T>;
 }
 export const api = {
+  results: (selection: Selection, signal?: AbortSignal) => get<WeeklyResults>("/results", {...selection}, signal),
   health: (signal?: AbortSignal) => get<Health>("/health", {}, signal),
   players: (search = "", signal?: AbortSignal) =>
     get<Player[]>("/players", { search, limit: 50 }, signal),

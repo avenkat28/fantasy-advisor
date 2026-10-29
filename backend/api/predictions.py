@@ -167,13 +167,21 @@ class PredictionService:
         bundle = self.models[position]
         as_of = pd.Timestamp(game.game_date).isoformat() + 'Z'
         feature_cutoff = as_of
+        scheduled = self.data.schedules[self.data.schedules.game_id.eq(game.game_id)]
+        kickoff = feature_cutoff
+        if not scheduled.empty and 'gametime' in scheduled:
+            source = scheduled.iloc[0]
+            if pd.notna(source.gametime):
+                kickoff = pd.Timestamp(f'{pd.Timestamp(source.gameday).date()} {source.gametime}').tz_localize('America/New_York').tz_convert('UTC').isoformat()
         if self.data.snapshot:
             as_of = min(pd.Timestamp(as_of), pd.Timestamp(self.data.snapshot['observed_at'])).isoformat()
         last_date = pd.Timestamp(own.game_date.max()).date().isoformat()
         limits = ['No calibrated uncertainty intervals are available.',
-                  'No verified injury or game-availability feed; roster membership does not establish availability.',
+                  'Injury reports may be unavailable; questionable/doubtful statuses have no calibrated point adjustment.',
                   'ppr-v1 trained on 2023–2024; validation selected on 2025 weeks 1–9.',
                   'Same-day statistics excluded; feature_cutoff is the game-date boundary. Source snapshots may contain later corrections.']
+        if roster_based and int(last.week) != week:
+            limits.append('Upcoming-week preview uses the prior weekly roster; team and availability may change.')
         if roster_based:
             limits.append('Weekly roster membership is observed, not a verified transaction effective timestamp.')
         else:
@@ -182,17 +190,37 @@ class PredictionService:
             limits.append('Player statistics are more than 28 days old.')
         return dict(**self.data.identity(last), season=season, week=week, opponent=str(game.opponent_team),
                     model_version=bundle['metadata']['version'], prediction_type='pregame',
-                    prediction_timestamp=datetime.now(timezone.utc).isoformat(), data_as_of=as_of, feature_cutoff=feature_cutoff,
+                    prediction_timestamp=datetime.now(timezone.utc).isoformat(), data_as_of=as_of, feature_cutoff=feature_cutoff, game_kickoff=kickoff,
                     last_statistical_game=last_date, historical_games=int(row.prior_games),
                     missing_features=inputs.columns[inputs.isna().iloc[0]].tolist(),
                     recent_ppr_mean_3=None if pd.isna(row.fantasy_points_ppr_mean_3) else float(row.fantasy_points_ppr_mean_3),
                     matchup_features={c: None if pd.isna(row[c]) else float(row[c]) for c in FEATURES if c.startswith('opponent_')},
-                    eligibility_source='weekly_roster' if roster_based else 'historical_appearance',
+                    eligibility_source=('provisional_prior_week_roster' if int(last.week) != week else 'weekly_roster') if roster_based else 'historical_appearance',
                     roster_week=int(last.week) if roster_based else None,
                     roster_status=str(last.roster_status) if roster_based else None,
                     roster_observed_at=last.observed_at.isoformat() if roster_based else None,
                     snapshot_observed_at=self.data.snapshot.get('observed_at') if self.data.snapshot else None,
                     limitations=limits), inputs
+
+    def injury_adjustment(self, metadata, value):
+        injuries = self.data.injuries
+        status, observed = None, None
+        if not injuries.empty:
+            cutoff = min(pd.Timestamp(metadata.get('game_kickoff', metadata['feature_cutoff'])), pd.Timestamp.now(tz='UTC'))
+            timestamps = pd.to_datetime(injuries.observed_at, utc=True)
+            rows = injuries[injuries.gsis_id.eq(metadata['player_id']) & injuries.season.eq(metadata['season'])
+                            & injuries.week.eq(metadata['week']) & timestamps.le(cutoff)
+                            & timestamps.ge(cutoff - pd.Timedelta(days=7))]
+            if not rows.empty:
+                row = rows.sort_values('observed_at').iloc[-1]
+                status = None if pd.isna(row.report_status) else str(row.report_status)
+                observed = str(row.observed_at)
+        # No invented play probabilities for questionable/doubtful designations.
+        adjusted = 0.0 if status and status.lower() == 'out' else float(value)
+        return {**metadata, 'base_projected_ppr_points': float(value), 'projected_ppr_points': adjusted,
+                'injury_status': status, 'injury_observed_at': observed,
+                'injury_adjustment': 'Out: zero projected points' if adjusted != value else
+                    ('Status shown; no calibrated adjustment' if observed else 'Injury report unavailable')}
 
     def _predict(self, position: str, inputs: pd.DataFrame) -> np.ndarray:
         values = np.asarray(self.models[position]['model'].predict(inputs), dtype=float)
@@ -202,7 +230,7 @@ class PredictionService:
 
     def project(self, player_id: str, season: int, week: int) -> dict:
         metadata, inputs = self._prepare(player_id, season, week)
-        return {**metadata, 'projected_ppr_points': float(self._predict(metadata['position'], inputs)[0])}
+        return self.injury_adjustment(metadata, self._predict(metadata['position'], inputs)[0])
 
     def weekly(self, season: int, week: int, position: str | None) -> tuple[list, list]:
         started = perf_counter()
@@ -229,7 +257,7 @@ class PredictionService:
                 continue
             # One inference call per position, rather than one per player.
             values = self._predict(player_position, pd.concat([inputs for _, inputs in records], ignore_index=True))
-            predictions.extend({**metadata, 'projected_ppr_points': float(value)}
+            predictions.extend(self.injury_adjustment(metadata, value)
                                for (metadata, _), value in zip(records, values))
         predictions.sort(key=lambda p: p['projected_ppr_points'], reverse=True)
         logger.info('Weekly projections season=%s week=%s position=%s projected=%s unavailable=%s elapsed=%.3fs',

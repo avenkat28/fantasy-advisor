@@ -44,6 +44,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
       players: vi.fn(),
       compare: vi.fn(),
       performance: vi.fn(),
+      results: vi.fn(),
       player: vi.fn(),
       projection: vi.fn(),
       history: vi.fn(),
@@ -56,6 +57,7 @@ beforeEach(() => {
   vi.mocked(api.weekly).mockResolvedValue(weekly);
   vi.mocked(api.players).mockResolvedValue([player, receiver]);
   vi.mocked(api.performance).mockResolvedValue(performance);
+  vi.mocked(api.results).mockResolvedValue({season: 2026, week: 8, message: "Only saved pregame forecasts are scored.", metrics: [], records: []});
   vi.mocked(api.compare).mockResolvedValue(comparison);
   vi.mocked(api.player).mockResolvedValue(details);
   vi.mocked(api.projection).mockResolvedValue(player);
@@ -235,13 +237,13 @@ describe("workspace and data views", () => {
       metrics: [],
       message: "Missing evaluation export.",
     });
-    render(<PerformancePage />);
+    renderWithSeason(<PerformancePage />);
     expect(
       await screen.findByText("Missing evaluation export."),
     ).toBeInTheDocument();
   });
   it("renders the model metrics and chronological test period", async () => {
-    render(<PerformancePage />);
+    renderWithSeason(<PerformancePage />);
     expect(await screen.findByText("Test held-out period")).toBeInTheDocument();
     expect(screen.getByText("4.120")).toBeInTheDocument();
     expect(

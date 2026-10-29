@@ -44,6 +44,9 @@ export interface Projection extends Player {
   season: number;
   week: number;
   opponent: string;
+  injury_status?: string | null;
+  injury_adjustment?: string | null;
+  base_projected_ppr_points?: number | null;
   projected_ppr_points: number;
   model_version: string;
   prediction_type: "pregame";
@@ -117,4 +120,10 @@ export interface PredictionHistory {
 export interface Selection {
   season: number;
   week: number;
+}
+
+export interface WeeklyResults {
+  season: number; week: number; message: string;
+  metrics: {model: string; count: number; mae: number; rmse: number; bias: number}[];
+  records: {player_id: string; player_name: string; position: string; projected: number | null; actual: number | null; baseline: number | null; error: number | null; captured_at: string | null}[];
 }

@@ -25,3 +25,10 @@ frontend/playwright-report/
 frontend/test-results/
 
 .vercel/
+
+# Current deployment snapshot and saved pregame forecasts
+!data/snapshots/
+!data/snapshots/ffdbcddcbe0f47d6af9ea264e49ce39e/
+!data/snapshots/ffdbcddcbe0f47d6af9ea264e49ce39e/**
+!data/forecasts/
+!data/forecasts/**

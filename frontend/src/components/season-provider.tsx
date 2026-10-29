@@ -119,6 +119,8 @@ export function WeekPicker() {
           ))}
         </select>
       </label>
+      <button className="button secondary small" disabled={!selection || selection.week <= 1} onClick={() => selection && select({season, week: selection.week - 1})}>Previous week</button>
+      <button className="button secondary small" disabled={!selection || selection.week >= 18} onClick={() => selection && select({season, week: selection.week + 1})}>Next week</button>
       <span className="picker-divider" />
       <label>
         <span>Regular season</span>

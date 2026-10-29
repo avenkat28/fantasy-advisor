@@ -43,7 +43,7 @@ def normalize_rosters(raw: pd.DataFrame, observed_at: str) -> pd.DataFrame:
 
 def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
                      schedules: pd.DataFrame, raw_rosters: pd.DataFrame,
-                     observed_at: str) -> dict:
+                     observed_at: str, injuries: pd.DataFrame | None = None, injury_error: str | None = None) -> dict:
     if schedules.empty or not schedules.season.eq(season).any():
         raise ValueError(f'Source has no {season} schedule')
     stats = clean_player_stats(raw_stats)
@@ -87,12 +87,23 @@ def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
         roster = pd.concat([prior_roster, roster], ignore_index=True).drop_duplicates()
         roster.to_parquet(folder / 'rosters.parquet', index=False)
         roster_seasons = sorted(roster.season.unique().tolist())
-    manifest = dict(version=1, season=season, observed_at=observed_at,
+    injury_path = None
+    if injuries is not None and not injuries.empty:
+        required = {'gsis_id', 'season', 'week', 'report_status'}
+        if required - set(injuries):
+            raise ValueError('Injury source is missing required columns')
+        injuries = injuries[injuries.season.eq(season)].copy()
+        injuries['observed_at'] = observed_at
+        if previous and previous.get('injuries'):
+            injuries = pd.concat([pd.read_parquet(root / previous['injuries']), injuries], ignore_index=True).drop_duplicates()
+        injuries.to_parquet(folder / 'injuries.parquet', index=False)
+        injury_path = str((folder / 'injuries.parquet').relative_to(root))
+    manifest = dict(injuries=injury_path, injury_error=injury_error, version=1, season=season, observed_at=observed_at,
                     players=str((folder / 'players.parquet').relative_to(root)),
                     schedules=str((folder / 'schedules.parquet').relative_to(root)),
                     rosters=str((folder / 'rosters.parquet').relative_to(root)),
                     roster_seasons=roster_seasons,
-                    sources=['nflreadpy.load_player_stats', 'nflreadpy.load_schedules', 'nflreadpy.load_rosters_weekly'],
+                    sources=['nflreadpy.load_player_stats', 'nflreadpy.load_schedules', 'nflreadpy.load_rosters_weekly'] + (['nflreadpy.load_injuries'] if injury_path else []),
                     latest_statistical_game=attached.game_date.max().date().isoformat(),
                     rows=dict(players=len(combined), schedules=len(schedules), rosters=len(roster)))
     (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -109,8 +120,15 @@ def refresh(root: Path, season: int, loader=None) -> dict:
     stats = loader.load_player_stats([season], summary_level='week').to_pandas()
     schedules = loader.load_schedules([season]).to_pandas()
     rosters = loader.load_rosters_weekly([season]).to_pandas()
+    injuries, injury_error = None, None
+    try:
+        injuries = loader.load_injuries([season]).to_pandas()
+        if injuries.empty:
+            injury_error = 'No injury reports published for this season.'
+    except Exception as error:
+        injury_error = f'Injury feed unavailable: {type(error).__name__}'
     observed = datetime.now(timezone.utc).isoformat()
-    return publish_snapshot(root, season, stats, schedules, rosters, observed)
+    return publish_snapshot(root, season, stats, schedules, rosters, observed, injuries, injury_error)
 
 
 def main():

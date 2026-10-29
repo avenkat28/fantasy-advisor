@@ -42,10 +42,15 @@ class Projection(Player):
     week: int
     opponent: str
     projected_ppr_points: float
+    base_projected_ppr_points: float | None = None
+    injury_status: str | None = None
+    injury_observed_at: str | None = None
+    injury_adjustment: str | None = None
     model_version: str
     prediction_type: Literal['pregame'] = 'pregame'
     prediction_timestamp: str
     data_as_of: str
+    game_kickoff: str | None = None
     feature_cutoff: str | None = None
     last_statistical_game: str
     historical_games: int

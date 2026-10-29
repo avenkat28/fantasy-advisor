@@ -27,6 +27,7 @@ export function ProjectionTable({
             <th scope="col">Rank</th>
             <th scope="col">Player</th>
             <th scope="col">Matchup</th>
+            {!compact && <th scope="col">Injury report</th>}
             {!compact && (
               <th scope="col">
                 Recent PPR<small>Up to 3 games</small>
@@ -62,6 +63,9 @@ export function ProjectionTable({
                   {player.opponent}
                 </span>
               </td>
+              {!compact && <td title={player.injury_adjustment || undefined}>{player.injury_status || "Unavailable"}
+                {player.eligibility_source === "provisional_prior_week_roster" && <small> · Prior-week roster preview</small>}
+              </td>}
               {!compact && (
                 <td>
                   <NumberValue value={player.recent_ppr_mean_3} />

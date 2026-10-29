@@ -201,3 +201,23 @@ Use the repository root `./` for this Vercel project, let it detect Services, an
 The Python service uses the existing root inference requirements, `app.py`, `.python-version`, and deployment preflight. Its scoped function exclusions stay below the 256-character configuration limit. Downloaded Linux dependencies measured 444.6 MB uncompressed; the actual Vercel build/runtime still needs verification against the bundle and request-time limits. Services is currently beta on all plans.
 
 See the [single-project deployment guide](docs/vercel_deployment.md) for exact dashboard settings, push commands, local development, and verification. The normal two-terminal local workflow remains available; Next.js now proxies local `/api` calls to FastAPI. Deployment doesn't retrain models or change their accuracy safeguards.
+
+## Automatic weekly updates and season results
+
+The macOS updater refreshes stats, schedules, weekly rosters, and nflverse injury reports, then saves forecasts for games in the next 14 days. Install with:
+
+```bash
+.venv312/bin/python -m backend.scripts.install_schedule
+```
+
+Runs Thursday and Monday at 6pm and Sunday at noon in the Mac's local timezone (Eastern on this machine). The Mac must be awake, logged in and online. Logs: `reports/weekly-update.log`. Run immediately with `.venv312/bin/python -m backend.scripts.update_weekly`. Loaded local APIs pick up a changed snapshot on the next request. This updates inputs and forecasts; it does not retrain ppr-v1.
+
+For a hosted site, install/authenticate the Vercel CLI and link this checkout to the intended project first. Reinstall with `--deploy` to publish each successful update using `vercel deploy --prod --yes`. The default local scheduler does **not** deploy. Vercel's filesystem is not durable storage: retain the local snapshot and `data/forecasts` archive, and upload both with each deployment. Git-based deployments must explicitly include the new generated snapshot and forecast files.
+
+The projections and performance pages show selected-week actuals, saved forecasts, signed errors and a comparison to the recent three-game average (MAE, RMSE and bias on identical matched games). `/api/results?season=2026&week=8` exposes this data. Older weeks without saved pregame forecasts show actuals only. Missing actuals remain pending rather than being assigned zero. Games with no statistical row, including some DNPs, are not scored. Comparison coverage is displayed and is not full-season accuracy.
+
+Previous/next buttons and the season/week menus navigate weeks 1–18. A game within 14 days may use the latest fresh prior-week roster when its own roster is unpublished; these previews explicitly identify that provisional roster. No historical roster is backdated.
+
+Injury reports use `nflreadpy.load_injuries`: [source documentation](https://nflreadpy.nflverse.com/api/load_functions/). Reports match player, season and week, must be observed before kickoff and be at most seven days old. An `Out` designation sets projected points to zero while retaining the base model estimate. Questionable/doubtful designations are shown without an unvalidated probability multiplier. Missing reports are labeled unavailable. Failed injury downloads are recorded in snapshot metadata; statistics refresh may still succeed. Forecasts freeze at kickoff (or midnight UTC when kickoff time is missing); statistical features retain their conservative game-date cutoff.
+
+To remove the schedule: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.fantasyadvisor.weekly-update.plist`, then remove that plist.

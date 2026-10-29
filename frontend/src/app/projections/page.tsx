@@ -1,4 +1,5 @@
 "use client";
+import { WeeklyResultsPanel } from "@/components/weekly-results";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ArrowDownWideNarrow, Info } from "lucide-react";
@@ -38,6 +39,7 @@ export default function ProjectionsPage() {
   );
   return (
     <>
+      <WeeklyResultsPanel />
       <PageHeading
         eyebrow="THE WEEKLY BOARD"
         title="Weekly projections"

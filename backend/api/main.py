@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import logging
 import os
 from typing import Annotated, Literal
+from threading import Lock
 
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -35,6 +36,25 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
     app.add_middleware(CORSMiddleware, allow_origins=[os.getenv('FANTASY_CORS_ORIGIN', 'http://localhost:3000')],
                        allow_methods=['GET'], allow_headers=['Content-Type'])
 
+    reload_lock = Lock()
+
+    @app.middleware('http')
+    async def reload_snapshot(request: Request, call_next):
+        if repository is None:
+            from starlette.concurrency import run_in_threadpool
+            def reload_if_changed():
+                import json
+                with reload_lock:
+                    path = request.app.state.data.root / 'data/current.json'
+                    current = json.loads(path.read_text()) if path.exists() else None
+                    if current != request.app.state.data.snapshot and not (os.getenv('FANTASY_PLAYERS') or os.getenv('FANTASY_SCHEDULES')):
+                        data = DataRepository()
+                        service = PredictionService(data)
+                        request.app.state.data = data
+                        request.app.state.predictions = service
+            await run_in_threadpool(reload_if_changed)
+        return await call_next(request)
+
     @app.exception_handler(APIError)
     async def api_error(request, error):
         return JSONResponse(status_code=error.status, content={'error': {'code': error.code, 'message': error.message}})
@@ -58,6 +78,11 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
             snapshot = {**data.snapshot, 'roster_weeks': {str(int(season)): sorted(rows.week.unique().tolist())
                         for season, rows in data.rosters.groupby('season')} if not data.rosters.empty else {}}
         return dict(status='ok' if all(models.values()) and available else 'degraded', models_available=models, data_available=available, snapshot=snapshot)
+
+    @app.get('/api/results')
+    def results(request: Request, season: Season, week: Week):
+        from backend.api.tracking import weekly_results
+        return weekly_results(request.app.state.data, season, week)
 
     @app.get('/api/players', response_model=list[s.Player])
     def players(request: Request, search: str = '', limit: Limit = 50):

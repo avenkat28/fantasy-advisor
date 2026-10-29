@@ -1,4 +1,5 @@
 "use client";
+import { WeeklyResultsPanel } from "@/components/weekly-results";
 import { useCallback } from "react";
 import { Info, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
@@ -21,6 +22,7 @@ export default function PerformancePage() {
   const models = data?.metrics.filter((m) => m.model === "xgboost");
   return (
     <>
+      <WeeklyResultsPanel />
       <PageHeading
         eyebrow="TRANSPARENCY BY DESIGN"
         title="Trust the evidence."
