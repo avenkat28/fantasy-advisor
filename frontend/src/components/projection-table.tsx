@@ -63,7 +63,9 @@ export function ProjectionTable({
                   {player.opponent}
                 </span>
               </td>
-              {!compact && <td title={player.injury_adjustment || undefined}>{player.injury_status || "Unavailable"}
+              {!compact && <td title={player.injury_adjustment || undefined}>{player.injury_status || (player.availability === "unavailable" ? player.roster_status : "No current designation")}
+                <small>{player.injury_description}{player.practice_status ? ` · ${player.practice_status}` : ""}</small>
+                <small>{player.injury_adjustment}</small>
                 {player.eligibility_source === "provisional_prior_week_roster" && <small> · Prior-week roster preview</small>}
               </td>}
               {!compact && (

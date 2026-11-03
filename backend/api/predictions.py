@@ -13,11 +13,12 @@ import numpy as np
 import pandas as pd
 
 from backend.api.data import APIError, DataRepository
+from backend.api.injuries import adjust_injury, PROJECTABLE_ROSTER
 from backend.ml.schema import FEATURES, feature_frame
 from backend.scripts.build_features import build_features
 
 logger = logging.getLogger('uvicorn.error')
-ELIGIBILITY = 'Published seasons use the requested weekly roster with source status ACT, observed before the game (maximum age 7 days), plus at least one earlier career appearance. Seasons through 2025 without roster snapshots use earlier same-season appearances. Membership does not verify game availability.'
+ELIGIBILITY = 'Published seasons use the requested weekly roster with an eligible active/reserve status (reserve/inactive projections are zero), observed before the game (maximum age 7 days), plus at least one earlier career appearance. Seasons through 2025 without roster snapshots use earlier same-season appearances. Membership does not verify game availability.'
 
 
 def pregame_features(players: pd.DataFrame, schedules: pd.DataFrame, player_id: str,
@@ -158,8 +159,8 @@ class PredictionService:
             last = known.iloc[-1]
             if last.team != game.team:
                 raise APIError(422, 'roster_unavailable', 'Roster membership changed after the game cutoff.')
-        if roster_based and last.roster_status != 'ACT':
-            raise APIError(422, 'roster_not_eligible', 'Weekly roster source status is not ACT; this API does not infer game availability.')
+        if roster_based and last.roster_status not in PROJECTABLE_ROSTER:
+            raise APIError(422, 'roster_not_eligible', 'Weekly roster status is not eligible for projections.')
         if records.empty or records[records.game_date < game.game_date].empty:
             raise APIError(422, 'insufficient_data', 'No earlier career game statistics; rookie/cold-start projections are not supported.')
         rows = self.day_features(season, week, str(game.game_date))
@@ -182,7 +183,7 @@ class PredictionService:
             as_of = min(pd.Timestamp(as_of), pd.Timestamp(self.data.snapshot['observed_at'])).isoformat()
         last_date = pd.Timestamp(own.game_date.max()).date().isoformat()
         limits = ['No calibrated uncertainty intervals are available.',
-                  'Injury reports may be unavailable; questionable/doubtful statuses have no calibrated point adjustment.',
+                  'Injury risk multipliers are configurable policy estimates, not calibrated probabilities or medical severity assessments. Missing reports do not establish health.',
                   'ppr-v1 trained on 2023–2024; validation selected on 2025 weeks 1–9.',
                   'Same-day statistics excluded; feature_cutoff is the game-date boundary. Source snapshots may contain later corrections.']
         if roster_based and int(last.week) != week:
@@ -208,24 +209,7 @@ class PredictionService:
                     limitations=limits), inputs
 
     def injury_adjustment(self, metadata, value):
-        injuries = self.data.injuries
-        status, observed = None, None
-        if not injuries.empty:
-            cutoff = min(pd.Timestamp(metadata.get('game_kickoff', metadata['feature_cutoff'])), pd.Timestamp.now(tz='UTC'))
-            timestamps = pd.to_datetime(injuries.observed_at, utc=True)
-            rows = injuries[injuries.gsis_id.eq(metadata['player_id']) & injuries.season.eq(metadata['season'])
-                            & injuries.week.eq(metadata['week']) & timestamps.le(cutoff)
-                            & timestamps.ge(cutoff - pd.Timedelta(days=7))]
-            if not rows.empty:
-                row = rows.sort_values('observed_at').iloc[-1]
-                status = None if pd.isna(row.report_status) else str(row.report_status)
-                observed = str(row.observed_at)
-        # No invented play probabilities for questionable/doubtful designations.
-        adjusted = 0.0 if status and status.lower() == 'out' else float(value)
-        return {**metadata, 'base_projected_ppr_points': float(value), 'projected_ppr_points': adjusted,
-                'injury_status': status, 'injury_observed_at': observed,
-                'injury_adjustment': 'Out: zero projected points' if adjusted != value else
-                    ('Status shown; no calibrated adjustment' if observed else 'Injury report unavailable')}
+        return adjust_injury(self.data, metadata, value)
 
     def _predict(self, position: str, inputs: pd.DataFrame) -> np.ndarray:
         values = np.asarray(self.models[position]['model'].predict(inputs), dtype=float)

@@ -159,11 +159,13 @@ def test_source_roster_status_filters_recommendations(setup):
     data.rosters.loc[data.rosters.player_id.eq('a'), 'roster_status'] = 'RES'
     with TestClient(create_app(data, PredictionService(data))) as c:
         result = c.get('/api/projections/a?season=2025&week=4')
-        assert result.status_code == 422
-        assert result.json()['error']['code'] == 'roster_not_eligible'
+        assert result.status_code == 200
+        assert result.json()['projected_ppr_points'] == 0
+        assert result.json()['availability'] == 'unavailable'
         weekly = c.get('/api/projections?season=2025&week=4').json()
-        assert weekly['total'] == 1
-        assert any(p['code'] == 'roster_not_eligible' for p in weekly['unavailable'])
+        assert weekly['total'] == 2
+        reserved = next(p for p in weekly['projections'] if p['player_id'] == 'a')
+        assert reserved['projected_ppr_points'] == 0
 
 
 def test_missing_published_roster_degrades_health(setup):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from backend.api.injuries import PROJECTABLE_ROSTER
 from backend.scripts.build_features import schedule_context
 from backend.scripts.build_player_stats import ROOT
 
@@ -76,7 +77,7 @@ class DataRepository:
             rows = self.roster_for_week(season, week, cutoff)
             if rows.empty:
                 raise APIError(422, 'roster_unavailable', 'No fresh weekly roster observed before this game cutoff. Refresh local data; historical rosters cannot be backdated.')
-            return rows[rows.roster_status.eq('ACT')]
+            return rows[rows.roster_status.isin(PROJECTABLE_ROSTER)]
         # Historical replay compatibility only; never silently infer new-season rosters.
         if season > 2025:
             raise APIError(422, 'roster_unavailable', 'A published weekly roster snapshot is required for seasons after 2025.')

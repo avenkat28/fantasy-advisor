@@ -161,7 +161,7 @@ export default function ComparisonPage() {
       )}
       <p className="disclaimer">
         A close call signals a small projection difference, not calibrated
-        uncertainty. No injury or game-day availability claim is made.
+        uncertainty. Injury adjustments use reported status and practice participation; risk reductions are policy estimates, not calibrated probabilities.
       </p>
     </>
   );
@@ -194,6 +194,8 @@ function ComparisonCard({
           <span>PROJECTED PPR</span>
         </div>
       </div>
+      <p>{player.injury_description}{player.practice_status ? ` · ${player.practice_status}` : ""}</p>
+      <p>{player.injury_adjustment}</p>
       <dl className="facts">
         <div>
           <dt>Recent PPR · up to 3 games</dt>

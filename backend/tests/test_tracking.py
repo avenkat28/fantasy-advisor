@@ -17,7 +17,7 @@ def test_injury_adjustment_is_point_in_time(setup):
     assert service.injury_adjustment(metadata, 10.)['projected_ppr_points'] == 10
     data.injuries['observed_at'] = '2025-09-28T12:00:00Z'
     data.injuries['report_status'] = 'Questionable'
-    assert service.injury_adjustment(metadata, 10.)['projected_ppr_points'] == 10
+    assert service.injury_adjustment(metadata, 10.)['projected_ppr_points'] == 7.5
 
 
 def test_results_compare_matched_baseline_without_backfill(setup):

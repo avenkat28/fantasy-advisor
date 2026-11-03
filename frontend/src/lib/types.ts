@@ -46,6 +46,10 @@ export interface Projection extends Player {
   opponent: string;
   injury_status?: string | null;
   injury_adjustment?: string | null;
+  injury_description?: string | null;
+  practice_status?: string | null;
+  availability?: string;
+  injury_multiplier?: number;
   base_projected_ppr_points?: number | null;
   projected_ppr_points: number;
   model_version: string;

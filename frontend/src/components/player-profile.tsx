@@ -73,7 +73,7 @@ export function PlayerProfile({ id }: { id: string }) {
           }
           note={
             projection.data
-              ? `${projection.data.team} vs ${projection.data.opponent} · pregame estimate`
+              ? `${projection.data.team} vs ${projection.data.opponent} · ${projection.data.injury_adjustment || "pregame estimate"}`
               : "Prediction requires sufficient pregame data"
           }
           accent
