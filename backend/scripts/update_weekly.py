@@ -11,14 +11,18 @@ from backend.scripts.refresh_current_data import refresh
 from backend.api.data import DataRepository
 from backend.api.predictions import PredictionService
 from backend.api.tracking import save_forecasts
+from backend.scripts.refine_models import refine
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--season', type=int, default=datetime.now(timezone.utc).year)
     parser.add_argument('--deploy', action='store_true', help='Publish refreshed data using the authenticated Vercel CLI')
+    parser.add_argument('--skip-refinement', action='store_true', help='Refresh data and forecasts without retraining')
     args = parser.parse_args()
     manifest = refresh(ROOT, args.season)
+    if not args.skip_refinement:
+        refine(ROOT, args.season, activate=True)
     data = DataRepository(ROOT)
     service = PredictionService(data)
     if not all(p in service.models for p in ['RB', 'WR']):

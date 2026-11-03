@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from functools import lru_cache
 import logging
+import json
 import os
 from pathlib import Path
 from threading import RLock
@@ -68,7 +69,11 @@ def pregame_rows(players: pd.DataFrame, schedules: pd.DataFrame, games: pd.DataF
 class PredictionService:
     def __init__(self, repository: DataRepository, model_dir: Path | None = None):
         self.data = repository
-        directory = model_dir or Path(os.getenv('FANTASY_MODELS', str(repository.root / 'models/ppr-v1')))
+        pointer = repository.root / 'models/current.json'
+        default = repository.root / 'models/ppr-v1'
+        if model_dir is None and not os.getenv('FANTASY_MODELS') and pointer.exists():
+            default = repository.root / json.loads(pointer.read_text())['directory']
+        directory = model_dir or Path(os.getenv('FANTASY_MODELS', str(default)))
         self.models = {}
         self._feature_lock = RLock()
         for position in ['RB', 'WR']:

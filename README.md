@@ -221,3 +221,34 @@ Previous/next buttons and the season/week menus navigate weeks 1–18. A game wi
 Injury reports use `nflreadpy.load_injuries`: [source documentation](https://nflreadpy.nflverse.com/api/load_functions/). Reports match player, season and week, must be observed before kickoff and be at most seven days old. An `Out` designation sets projected points to zero while retaining the base model estimate. Questionable/doubtful designations are shown without an unvalidated probability multiplier. Missing reports are labeled unavailable. Failed injury downloads are recorded in snapshot metadata; statistics refresh may still succeed. Forecasts freeze at kickoff (or midnight UTC when kickoff time is missing); statistical features retain their conservative game-date cutoff.
 
 To remove the schedule: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.fantasyadvisor.weekly-update.plist`, then remove that plist.
+
+## Ongoing model refinement
+
+The weekly updater now retrains by default after a successful refresh. Use
+`python -m backend.scripts.update_weekly --season 2026` (or `--skip-refinement`
+for inputs/forecasts only). Run refinement alone with
+`python -m backend.scripts.refine_models --season 2026 --activate`.
+It requires at least three observed current-season weeks. The last two observed
+weeks are excluded from the evaluation fit; fixed XGBoost parameters avoid tuning
+against those outcomes. Both RB and WR must beat the frozen ppr-v1 benchmark on
+MAE and RMSE before an atomic `models/current.json` switch activates the final
+refit. That final refit uses all observed regular-season games through the selected
+season. New API instances honor the pointer; `FANTASY_MODELS` still overrides it.
+Restart a running API after standalone model activation.
+
+Timestamped `reports/ppr-refined-*/` folders contain the snapshot provenance,
+weekly results, injury CSV, held-out predictions, and evaluation report.
+`models/ppr-refined-*/` preserves the corresponding model bundles; original
+ppr-v1 models and their historical performance report remain intact. These model
+artifacts are local and ignored by Git; hosted deployments must include them and
+the pointer explicitly. The existing performance endpoint continues to show the
+original ppr-v1 historical benchmark; refreshed-model metrics are in the new report.
+
+Injury statuses remain subject to the existing pre-kickoff observation rule.
+Reports downloaded after games are exported for review but never retroactively
+inserted into training inputs. Out statuses zero eligible future projections;
+questionable statuses have no uncalibrated multiplier. Missing actuals and DNPs
+without statistics are not treated as zero. The newest observed week may be
+incomplete. Recent-window gains are descriptive, not proof of future accuracy;
+saved future forecasts provide prospective monitoring. The promotion gate compares
+to frozen ppr-v1, not to a previously activated refit.
