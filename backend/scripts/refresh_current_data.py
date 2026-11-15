@@ -31,8 +31,11 @@ def normalize_rosters(raw: pd.DataFrame, observed_at: str) -> pd.DataFrame:
     roster = raw.rename(columns={'gsis_id': 'player_id', 'full_name': 'player_name', 'status': 'roster_status'}).copy()
     roster = roster[roster.position.isin(['RB', 'WR']) & roster.player_id.notna()]
     roster['observed_at'] = observed_at
-    roster = roster[ROSTER_COLUMNS].drop_duplicates()
-    if roster.empty or roster.isna().any().any():
+    # Photos are optional and must never block a valid statistics refresh.
+    if 'headshot_url' not in roster:
+        roster['headshot_url'] = None
+    roster = roster[ROSTER_COLUMNS + ['headshot_url']].drop_duplicates()
+    if roster.empty or roster[ROSTER_COLUMNS].isna().any().any():
         raise ValueError('Empty or incomplete supported weekly roster')
     if roster.duplicated(['player_id', 'season', 'week']).any():
         raise ValueError('Ambiguous player/team membership in weekly roster')

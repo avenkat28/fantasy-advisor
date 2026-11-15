@@ -18,6 +18,8 @@ class APIError(Exception):
 class DataRepository:
     def __init__(self, root: Path = ROOT):
         self.root = root
+        photo_path = root / "data/player_headshots.json"
+        self.headshots = json.loads(photo_path.read_text()) if photo_path.exists() else {}
         manifest_path = root / 'data/current.json'
         self.snapshot = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
         # Explicit path overrides opt out of the published snapshot as a unit.
@@ -93,9 +95,12 @@ class DataRepository:
         order = ['game_date'] if 'game_date' in rows else ['season', 'week']
         return rows.sort_values(order)
 
-    @staticmethod
-    def identity(row) -> dict:
-        return {key: str(row[key]) for key in ['player_id', 'player_name', 'position', 'team']}
+    def identity(self, row) -> dict:
+        identity = {key: str(row[key]) for key in ["player_id", "player_name", "position", "team"]}
+        photo = row.get("headshot_url")
+        if not isinstance(photo, str) or not photo.startswith("https://"):
+            photo = self.headshots.get(identity["player_id"])
+        return {**identity, "headshot_url": photo}
 
     def catalog(self) -> pd.DataFrame:
         order = ['game_date'] if 'game_date' in self.players else ['season', 'week']

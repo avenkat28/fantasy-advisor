@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { PlayerAvatar } from "./player-avatar";
 import type { Projection } from "@/lib/types";
 import { EmptyState, NumberValue, PositionBadge } from "./ui";
 export function ProjectionTable({
@@ -49,7 +50,7 @@ export function ProjectionTable({
                   className="table-player"
                   href={`/players/${encodeURIComponent(player.player_id)}`}
                 >
-                  <strong>{player.player_name}</strong>
+                  <span className="player-identity"><PlayerAvatar player={player} /><strong>{player.player_name}</strong></span>
                   <span>
                     <PositionBadge position={player.position} />
                     {player.team}

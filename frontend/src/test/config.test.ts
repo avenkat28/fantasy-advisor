@@ -5,6 +5,11 @@ import createConfig from "../../next.config";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("same-origin local proxy", () => {
+  it("ignores local-only overrides on Vercel", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("FANTASY_LOCAL_API_URL", "http://localhost:8000");
+    expect(await createConfig(PHASE_PRODUCTION_BUILD).rewrites!()).toEqual([]);
+  });
   it("does not embed a localhost backend route in a production build", async () => {
     vi.stubEnv("FANTASY_LOCAL_API_URL", undefined);
     expect(await createConfig(PHASE_PRODUCTION_BUILD).rewrites!()).toEqual([]);

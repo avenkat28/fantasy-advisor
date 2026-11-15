@@ -1,6 +1,7 @@
 "use client";
 import { useCallback } from "react";
 import Link from "next/link";
+import { PlayerAvatar } from "./player-avatar";
 import { ArrowLeft, Info } from "lucide-react";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
@@ -14,7 +15,6 @@ import {
   NumberValue,
   PageHeading,
   Panel,
-  PositionBadge,
   Stat,
 } from "./ui";
 import type { HistoricalGame } from "@/lib/types";
@@ -55,7 +55,7 @@ export function PlayerProfile({ id }: { id: string }) {
         eyebrow="PLAYER PROFILE"
         title={player.player_name}
         description={`${player.team} · ${player.position} · ${player.upcoming_opponent ? `Next scheduled opponent: ${player.upcoming_opponent}` : "No future opponent available in this snapshot"}`}
-        action={<PositionBadge position={player.position} />}
+        action={<PlayerAvatar player={player} large />}
       />
       <div className="stats-grid four">
         <Stat

@@ -252,3 +252,9 @@ without statistics are not treated as zero. The newest observed week may be
 incomplete. Recent-window gains are descriptive, not proof of future accuracy;
 saved future forecasts provide prospective monitoring. The promotion gate compares
 to frozen ppr-v1, not to a previously activated refit.
+
+### Player photos and refreshed deployment data
+
+Player search, projections, and profiles show optional nflverse roster `headshot_url` photos, with initials when a URL is missing or fails. No API key or paid image API is required. Images are served by the original provider; public availability does not transfer image rights. `data/player_headshots.json` supplies photos for existing snapshots; future refreshes retain optional roster photo URLs. Source: https://nflreadr.nflverse.com/reference/load_rosters.html.
+
+Publish `data/current.json` together with its referenced snapshot files. All generated snapshot directories are now eligible for Git inclusion; previously the ignore rules allowed only one fixed snapshot directory, so later refreshes could update the pointer without including the data in a Git deployment. The week picker also offers “Latest available week” to recover from an old persisted selection.

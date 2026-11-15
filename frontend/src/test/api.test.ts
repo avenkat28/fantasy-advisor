@@ -2,6 +2,21 @@ import { describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
 import { health } from "./fixtures";
 describe("typed HTTP client", () => {
+  it("uses the hosted app origin when a localhost API URL was configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://localhost:8000");
+    vi.stubGlobal("window", { location: { hostname: "fantasy.example.com" } });
+    vi.resetModules();
+    try {
+      const { api: hostedApi } = await import("@/lib/api");
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(health)));
+      await hostedApi.health();
+      expect(fetchMock).toHaveBeenCalledWith("/api/health", expect.any(Object));
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
+  });
   it("calls the real backend path with encoded search parameters", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -41,6 +56,10 @@ describe("typed HTTP client", () => {
       status: 502,
       code: "request_failed",
     });
+  });
+  it("explains a successful HTML response instead of exposing a JSON parse error", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("<html>Fallback</html>"));
+    await expect(api.health()).rejects.toMatchObject({ code: "invalid_response", status: 200 });
   });
   it("loads health metadata without substituting sample data", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(

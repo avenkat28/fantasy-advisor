@@ -175,3 +175,13 @@ def test_missing_published_roster_degrades_health(setup):
     with TestClient(create_app(reloaded, PredictionService(reloaded))) as c:
         assert c.get('/api/health').json()['status'] == 'degraded'
         assert c.get('/api/projections/a?season=2025&week=4').json()['error']['code'] == 'roster_unavailable'
+
+
+def test_optional_player_photos_do_not_block_refresh(setup):
+    raw = roster_frame()
+    raw['headshot_url'] = ['https://example.com/a.png', None, None]
+    normalized = normalize_rosters(raw, '2025-09-28T12:00:00Z')
+    assert normalized.loc[normalized.player_id.eq('a'), 'headshot_url'].iloc[0] == 'https://example.com/a.png'
+    data, _ = published(setup)
+    data.headshots = {'a': 'https://example.com/a.png'}
+    assert data.details('a')['headshot_url'] == 'https://example.com/a.png'

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Search, X } from "lucide-react";
 import Link from "next/link";
+import { PlayerAvatar } from "./player-avatar";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import type { Player } from "@/lib/types";
@@ -36,6 +37,7 @@ export function PlayerSearch({
       {onSelect && selected ? (
         <div className="selected-player">
           <div>
+            <PlayerAvatar player={selected} />
             <PositionBadge position={selected.position} />
             <strong>{selected.player_name}</strong>
             <span>{selected.team}</span>
@@ -107,14 +109,7 @@ export function PlayerSearch({
 function PlayerResult({ player }: { player: Player }) {
   return (
     <>
-      <span className="player-avatar">
-        {player.player_name
-          .split(/[ .]+/)
-          .filter(Boolean)
-          .map((n) => n[0])
-          .slice(0, 2)
-          .join("")}
-      </span>
+      <PlayerAvatar player={player} />
       <span className="result-name">
         <strong>{player.player_name}</strong>
         <small>

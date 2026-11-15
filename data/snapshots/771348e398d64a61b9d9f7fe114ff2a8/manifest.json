@@ -1,0 +1,25 @@
+{
+  "injuries": "data/snapshots/771348e398d64a61b9d9f7fe114ff2a8/injuries.parquet",
+  "injury_error": null,
+  "version": 1,
+  "season": 2026,
+  "observed_at": "2026-11-08T17:00:10.293974+00:00",
+  "players": "data/snapshots/771348e398d64a61b9d9f7fe114ff2a8/players.parquet",
+  "schedules": "data/snapshots/771348e398d64a61b9d9f7fe114ff2a8/schedules.parquet",
+  "rosters": "data/snapshots/771348e398d64a61b9d9f7fe114ff2a8/rosters.parquet",
+  "roster_seasons": [
+    2026
+  ],
+  "sources": [
+    "nflreadpy.load_player_stats",
+    "nflreadpy.load_schedules",
+    "nflreadpy.load_rosters_weekly",
+    "nflreadpy.load_injuries"
+  ],
+  "latest_statistical_game": "2026-11-05",
+  "rows": {
+    "players": 21258,
+    "schedules": 1127,
+    "rosters": 35532
+  }
+}

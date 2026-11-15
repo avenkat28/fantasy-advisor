@@ -22,6 +22,7 @@ class Health(BaseModel):
 
 
 class Player(BaseModel):
+    headshot_url: str | None = None
     player_id: str
     player_name: str
     position: str

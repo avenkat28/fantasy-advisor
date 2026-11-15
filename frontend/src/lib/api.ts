@@ -11,10 +11,16 @@ import type {
   WeeklyProjections,
 } from "./types";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-  /\/$/,
-  "",
-);
+const configuredBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+// A hosted browser must never send requests to the visitor's own computer.
+function apiBase() {
+  if (typeof window !== "undefined" && !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) {
+    try {
+      if (["localhost", "127.0.0.1", "[::1]"].includes(new URL(configuredBase).hostname)) return "";
+    } catch { /* An empty or relative base uses the app's origin. */ }
+  }
+  return configuredBase;
+}
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -38,7 +44,7 @@ async function get<T>(
   let response: Response;
   try {
     response = await fetch(
-      `${BASE_URL}/api${path}${query.size ? `?${query}` : ""}`,
+      `${apiBase()}/api${path}${query.size ? `?${query}` : ""}`,
       {
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
@@ -50,7 +56,7 @@ async function get<T>(
   } catch (error) {
     if (signal?.aborted) throw error;
     throw new ApiError(
-      "Prediction data cannot currently be loaded. Check that the FastAPI server is running and try again.",
+      "The data service could not be reached or took too long to respond. Please try again.",
       0,
       "network_error",
     );
@@ -64,7 +70,15 @@ async function get<T>(
       body?.error?.code || "request_failed",
     );
   }
-  return response.json() as Promise<T>;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new ApiError(
+      "The data service returned an invalid response. Please try again.",
+      response.status,
+      "invalid_response",
+    );
+  }
 }
 export const api = {
   results: (selection: Selection, signal?: AbortSignal) => get<WeeklyResults>("/results", {...selection}, signal),

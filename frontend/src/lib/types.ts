@@ -1,5 +1,6 @@
 /** Mirrors backend/api/schemas.py. Null means unavailable, never zero. */
 export interface Player {
+  headshot_url?: string | null;
   player_id: string;
   player_name: string;
   position: string;

@@ -99,6 +99,8 @@ export function WeekPicker() {
       ),
     ]),
   ).sort((a, b) => b - a);
+  const latestWeeks = health?.snapshot?.roster_weeks?.[String(health?.snapshot?.season)];
+  const latest = latestWeeks?.length ? Math.max(...latestWeeks) : null;
   return (
     <div className="week-picker">
       <label>
@@ -121,6 +123,9 @@ export function WeekPicker() {
       </label>
       <button className="button secondary small" disabled={!selection || selection.week <= 1} onClick={() => selection && select({season, week: selection.week - 1})}>Previous week</button>
       <button className="button secondary small" disabled={!selection || selection.week >= 18} onClick={() => selection && select({season, week: selection.week + 1})}>Next week</button>
+      {latest && health?.snapshot && (
+        <button className="button secondary small" onClick={() => select({season: health.snapshot!.season, week: latest})}>Latest available week</button>
+      )}
       <span className="picker-divider" />
       <label>
         <span>Regular season</span>

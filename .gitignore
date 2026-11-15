@@ -28,7 +28,7 @@ frontend/test-results/
 
 # Current deployment snapshot and saved pregame forecasts
 !data/snapshots/
-!data/snapshots/ffdbcddcbe0f47d6af9ea264e49ce39e/
-!data/snapshots/ffdbcddcbe0f47d6af9ea264e49ce39e/**
+!data/snapshots/**
+!data/player_headshots.json
 !data/forecasts/
 !data/forecasts/**
