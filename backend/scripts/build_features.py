@@ -8,7 +8,7 @@ import pandas as pd
 
 from backend.scripts.build_player_stats import ROOT, IDENTIFIERS, validate_records
 
-POSITIONS = ["QB", "RB", "WR", "TE"]
+POSITIONS = ["QB", "RB", "WR", "TE", "K", "DST"]
 TARGET = "target_fantasy_points_ppr"
 METRICS = ["passing_yards", "rushing_yards", "receiving_yards", "receptions", "targets", "carries"]
 TD_COLUMNS = ["passing_tds", "rushing_tds", "receiving_tds", "special_teams_tds"]
@@ -83,7 +83,7 @@ def defensive_features(players: pd.DataFrame, context: pd.DataFrame) -> pd.DataF
             grid, ["team", "position"], "allowed_ppr", window)
     grid["opponent_prior_games"] = grid.groupby(["team", "position"]).cumcount()
     yard_columns = [c for c in ["passing_yards", "rushing_yards"] if c in players]
-    yards = players.groupby(["game_id", "opponent_team"], as_index=False)[yard_columns].agg(known_sum)
+    yards = players[players.position.isin(["QB", "RB", "WR", "TE"])].groupby(["game_id", "opponent_team"], as_index=False)[yard_columns].agg(known_sum)
     yards = yards.rename(columns={"opponent_team": "team"})
     defense = context.merge(yards, on=["game_id", "team"], how="left", validate="one_to_one")
     defense = defense.sort_values(["team", "game_date", "game_id"])
@@ -102,7 +102,7 @@ def build_features(players: pd.DataFrame, schedules: pd.DataFrame) -> pd.DataFra
     if "fantasy_points_ppr" not in players:
         raise ValueError("Missing Task 1 fantasy_points_ppr target")
     if not players.position.isin(POSITIONS).all() or players.empty:
-        raise ValueError("Expected nonempty QB/RB/WR/TE dataset")
+        raise ValueError("Expected nonempty supported fantasy dataset")
     frame, context = schedule_context(players.copy(), schedules)
     frame = frame.sort_values(["player_id", "game_date", "game_id"]).reset_index(drop=True)
     if frame.duplicated(["player_id", "game_date"]).any():

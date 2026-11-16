@@ -69,7 +69,7 @@ function Frame({ children }: { children: ReactNode }) {
             <div>
               <strong>Built on the numbers</strong>
               <p>
-                Full-PPR · RB & WR
+                Full-PPR · QB, RB, WR, TE, K & D/ST
                 <br />
                 XGBoost projections
               </p>

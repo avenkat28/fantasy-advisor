@@ -21,7 +21,7 @@ export function ProjectionTable({
     >
       <table>
         <caption className="sr-only">
-          Projected full-PPR fantasy points for the selected season and week
+          Projected fantasy points for the selected season and week
         </caption>
         <thead>
           <tr>
@@ -31,11 +31,11 @@ export function ProjectionTable({
             {!compact && <th scope="col">Injury report</th>}
             {!compact && (
               <th scope="col">
-                Recent PPR<small>Up to 3 games</small>
+                Recent points<small>Up to 3 games</small>
               </th>
             )}
             <th scope="col" className="numeric">
-              Projected<small>Full PPR</small>
+              Projected<small>Fantasy points</small>
             </th>
           </tr>
         </thead>

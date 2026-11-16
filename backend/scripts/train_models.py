@@ -44,7 +44,7 @@ def validate_dataset(frame):
 
 
 def chronological_split(frame):
-    frame = frame.loc[frame.position.isin(['RB', 'WR']) & frame.season_type.eq('REG')].copy()
+    frame = frame.loc[frame.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST']) & frame.season_type.eq('REG')].copy()
     if not frame.week.between(1, 18).all() or not frame.season.isin([2023, 2024, 2025]).all():
         raise ValueError('Expected regular-season 2023–2025 weeks 1–18')
     frame['game_date'] = pd.to_datetime(frame.game_date, errors='raise')
@@ -87,7 +87,7 @@ def run_training(source: Path, models: Path, output: Path):
               'periods': {'train': '2023–2024 REG', 'validation': '2025 REG weeks 1–9', 'test': '2025 REG weeks 10–18'},
               'packages': {p: importlib.metadata.version(p) for p in ['pandas', 'numpy', 'scikit-learn', 'xgboost', 'joblib', 'matplotlib']}}
     all_predictions, importances = [], []
-    for position in ['RB', 'WR']:
+    for position in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
         train, validation, test = [part[part.position == position].copy() for part in splits]
         if any(len(part) < 30 for part in [train, validation, test]):
             raise ValueError(f'Insufficient {position} records (need at least 30 per split)')
@@ -110,6 +110,9 @@ def run_training(source: Path, models: Path, output: Path):
                     'seed': SEED, 'source_sha256': report['source_sha256'], 'packages': report['packages'],
                     'hyperparameters': {k: (None if isinstance(v, float) and np.isnan(v) else v)
                                         for k, v in best[-1].get_params().items()}}
+        if position in ['K', 'DST']:
+            from backend.scoring import SCORING_POLICY
+            metadata['scoring_policy'] = SCORING_POLICY
         joblib.dump({'model': best, 'metadata': metadata}, models / f'{position}.joblib')
         joblib.dump({'model': ridge, 'metadata': {**metadata, 'model_type': 'ridge', 'hyperparameters': {'alpha': 10}}}, models / f'{position}_ridge.joblib')
         (models / f'{position}_metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
@@ -164,7 +167,7 @@ def run_training(source: Path, models: Path, output: Path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--input', type=Path, default=ROOT / 'data/processed/player_features_2023_2025.parquet')
+    parser.add_argument('--input', type=Path, default=ROOT / 'data/processed/player_features_all_positions_2023_2025.parquet')
     parser.add_argument('--models', type=Path, default=ROOT / 'models/ppr-v1')
     parser.add_argument('--output', type=Path, default=ROOT / 'reports/ml')
     args = parser.parse_args()

@@ -98,7 +98,7 @@ export function EmptyState({
 export function PositionBadge({ position }: { position: string }) {
   return (
     <span className={`position ${position === "WR" ? "wide" : ""}`}>
-      {position}
+      {position === "DST" ? "D/ST" : position}
     </span>
   );
 }

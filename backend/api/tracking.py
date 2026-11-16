@@ -40,7 +40,7 @@ def weekly_results(data, season, week):
                          captured_at=p['prediction_timestamp']))
     saved_ids = {r['player_id'] for r in rows}
     for player_id, row in actuals.iterrows():
-        if player_id not in saved_ids and row.position in ['RB', 'WR']:
+        if player_id not in saved_ids and row.position in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
             rows.append(dict(player_id=player_id, player_name=row.player_name, position=row.position,
                              projected=None, actual=float(row.fantasy_points_ppr), baseline=None, error=None, captured_at=None))
     scored = [r for r in rows if r['actual'] is not None and r['projected'] is not None]

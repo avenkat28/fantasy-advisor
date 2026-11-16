@@ -41,19 +41,24 @@ async function get<T>(
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined) query.set(key, String(value));
   });
+  const controller = new AbortController();
+  const cancel = () => controller.abort(signal?.reason);
+  if (signal?.aborted) cancel();
+  else signal?.addEventListener("abort", cancel, { once: true });
+  const timeout = setTimeout(() => controller.abort(), 60000);
   let response: Response;
   try {
     response = await fetch(
       `${apiBase()}/api${path}${query.size ? `?${query}` : ""}`,
       {
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
-          : AbortSignal.timeout(30000),
+        signal: controller.signal,
         headers: { Accept: "application/json" },
         cache: "no-store",
       },
     );
   } catch (error) {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
     if (signal?.aborted) throw error;
     throw new ApiError(
       "The data service could not be reached or took too long to respond. Please try again.",
@@ -61,23 +66,28 @@ async function get<T>(
       "network_error",
     );
   }
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new ApiError(
-      body?.error?.message ||
-        "The data service could not complete this request.",
-      response.status,
-      body?.error?.code || "request_failed",
-    );
-  }
   try {
-    return await response.json() as T;
-  } catch {
-    throw new ApiError(
-      "The data service returned an invalid response. Please try again.",
-      response.status,
-      "invalid_response",
-    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new ApiError(
+        body?.error?.message ||
+          "The data service could not complete this request.",
+        response.status,
+        body?.error?.code || "request_failed",
+      );
+    }
+    try {
+      return await response.json() as T;
+    } catch {
+      throw new ApiError(
+        "The data service returned an invalid response. Please try again.",
+        response.status,
+        "invalid_response",
+      );
+    }
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
   }
 }
 export const api = {

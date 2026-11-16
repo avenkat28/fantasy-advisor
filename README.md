@@ -258,3 +258,54 @@ to frozen ppr-v1, not to a previously activated refit.
 Player search, projections, and profiles show optional nflverse roster `headshot_url` photos, with initials when a URL is missing or fails. No API key or paid image API is required. Images are served by the original provider; public availability does not transfer image rights. `data/player_headshots.json` supplies photos for existing snapshots; future refreshes retain optional roster photo URLs. Source: https://nflreadr.nflverse.com/reference/load_rosters.html.
 
 Publish `data/current.json` together with its referenced snapshot files. All generated snapshot directories are now eligible for Git inclusion; previously the ignore rules allowed only one fixed snapshot directory, so later refreshes could update the pointer without including the data in a Git deployment. The week picker also offers “Latest available week” to recover from an old persisted selection.
+
+### QB and TE support
+
+Search, projections, comparisons, the dashboard and scheduled model refinement now support QB, RB, WR and TE. `train_models` trains and evaluates a separate model for each position using the existing chronological splits. QB and TE use their bundled ppr-v1 models until a four-position refreshed candidate passes the promotion gate. Existing RB/WR refreshed bundles remain usable. The QB model currently uses the shared fantasy-score, rushing and matchup features; passing-specific features are not yet included.
+
+Browser requests now use AbortController with a 60-second timeout, avoiding a dependency on AbortSignal.any/timeout that could turn unsupported-browser errors into a misleading network failure. The screenshot alone cannot establish whether a particular hosted failure was caused by browser compatibility, network connectivity or cold-start latency. Redeploy both services with the new QB/TE bundles and evaluation report to publish this change.
+
+### Kickers, team D/ST, and free images
+
+K and DST now have separately trained models, position filters, search, profiles,
+comparisons, and prospective forecast tracking. D/ST represents the full team
+unit, including special teams; it uses schedule eligibility instead of an
+individual roster/injury status. Negative D/ST projections remain negative.
+
+The versioned `default-k-dst-v1` rules live in `backend/scoring.py`: field goals
+0–39 yards = 3, 40–49 = 4, 50+ = 5; PAT = 1; no missed-kick penalties. D/ST:
+sacks = 1; interceptions, opponent-fumble recoveries, safeties, blocked kicks,
+and defensive two-point returns = 2; defensive and special-teams TDs = 6.
+Points allowed: 0 = 10, 1–6 = 7, 7–13 = 4, 14–20 = 1, 21–27 = 0,
+28–34 = -1, 35+ = -4. This variant uses the opponent's final scoreboard total,
+including scores some league platforms exclude. League-specific rules require
+changing the targets and retraining, not merely relabeling model estimates.
+The legacy `fantasy_points_ppr` API field carries fantasy points for all positions;
+K/DST responses also identify their scoring policy.
+
+Bootstrap and train expanded historical artifacts with:
+
+```bash
+.venv312/bin/python -m backend.scripts.build_special_teams --season 2026
+.venv312/bin/python -m backend.scripts.train_models
+```
+
+Use `--cached` to reuse the bootstrap downloads. Weekly refreshes subsequently
+retain historical K/DST records and fetch new player/team statistics and team
+images. Current roster observation times remain genuine; K/QB/TE historical
+pregame projections cannot be backdated to before their roster coverage began.
+K/DST models use the existing shared pregame feature contract, with unrelated
+offensive inputs missing rather than invented. They are initial baselines;
+2025 held-out errors do not establish future accuracy.
+
+Player photos come from actual nflverse player-stat/roster `headshot_url` fields;
+D/ST uses the source team logo. The source lookup now covers historical players
+as well as current rosters, and an HTTPS-only source photo is retained at ingestion.
+Images load lazily and fall back to initials on missing/broken URLs. No paid API
+or key is required. Public URLs are not a grant of image rights. Source references:
+https://nflreadr.nflverse.com/reference/load_player_stats.html and
+https://nflreadr.nflverse.com/reference/load_teams.html.
+
+Publish the latest `data/current.json`, referenced snapshot, all six model bundles,
+and updated reports together. New K/DST bundles are explicitly allowed by Git;
+standalone refinement still requires deployment/restart for model activation.

@@ -40,6 +40,9 @@ class DataRepository:
         self.context = pd.DataFrame()
         if not self.players.empty and not self.schedules.empty:
             self.players, self.context = schedule_context(self.players, self.schedules)
+        if 'headshot_url' in self.players:
+            photos = self.players.dropna(subset=['headshot_url']).sort_values(['season', 'week'])
+            self.headshots.update(photos.drop_duplicates('player_id', keep='last').set_index('player_id').headshot_url.to_dict())
         self.report_dir = root / 'reports/ml'
         self.report = self.read_json('training_report.json')
         path = self.report_dir / 'test_predictions.csv'
@@ -74,18 +77,30 @@ class DataRepository:
         rows = rows[rows.observed_at.ge(available - pd.Timedelta(days=7))]
         return rows.sort_values('observed_at').drop_duplicates('player_id', keep='last')
 
+    def defense_candidates(self, season: int, week: int) -> pd.DataFrame:
+        history = self.players[self.players.position.eq('DST')]
+        return history.sort_values('game_date').drop_duplicates('player_id', keep='last')
+
+    def defense_candidates(self, season: int, week: int) -> pd.DataFrame:
+        rows = self.players[self.players.position.eq('DST')]
+        if rows.empty:
+            return rows.copy()
+        games = self.context[self.context.season.eq(season) & self.context.week.eq(week)]
+        rows = rows[rows.team.isin(games.team)]
+        return rows.sort_values('game_date').drop_duplicates('player_id', keep='last')
+
     def candidates(self, season: int, week: int, cutoff) -> pd.DataFrame:
+        defenses = self.defense_candidates(season, week)
         if self.roster_season(season):
             rows = self.roster_for_week(season, week, cutoff)
             if rows.empty:
                 raise APIError(422, 'roster_unavailable', 'No fresh weekly roster observed before this game cutoff. Refresh local data; historical rosters cannot be backdated.')
-            return rows[rows.roster_status.isin(PROJECTABLE_ROSTER)]
-        # Historical replay compatibility only; never silently infer new-season rosters.
+            return pd.concat([rows[rows.roster_status.isin(PROJECTABLE_ROSTER)], defenses], ignore_index=True)
         if season > 2025:
             raise APIError(422, 'roster_unavailable', 'A published weekly roster snapshot is required for seasons after 2025.')
         prior = self.players[self.players.game_date < cutoff]
         latest = prior.sort_values('game_date').drop_duplicates('player_id', keep='last')
-        return latest[latest.season.eq(season) & latest.position.isin(['RB', 'WR'])]
+        return latest[latest.season.eq(season) & latest.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST'])]
 
     def records(self, player_id: str) -> pd.DataFrame:
         self.require_data()
@@ -114,7 +129,7 @@ class DataRepository:
     def search(self, search: str, limit: int) -> list[dict]:
         self.require_data()
         latest = self.catalog()
-        latest = latest[latest.position.isin(['RB', 'WR'])]
+        latest = latest[latest.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST'])]
         names = latest.get('player_display_name', latest.player_name).fillna(latest.player_name)
         mask = names.str.contains(search, case=False, regex=False) | latest.player_name.str.contains(search, case=False, regex=False)
         return [self.identity(row) for _, row in latest[mask].sort_values('player_name').head(limit).iterrows()]
@@ -124,8 +139,8 @@ class DataRepository:
         last = rows.iloc[-1] if not rows.empty else self.catalog().query('player_id == @player_id').iloc[-1]
         identity = self.catalog()
         identity = identity[identity.player_id.eq(player_id)].iloc[-1]
-        if identity.position not in ['RB', 'WR']:
-            raise APIError(422, 'unsupported_position', 'Only RB and WR are supported.')
+        if identity.position not in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
+            raise APIError(422, 'unsupported_position', 'Only QB, RB, WR, TE, K and DST are supported.')
         metrics = [c for c in ['fantasy_points_ppr', 'rushing_yards', 'receiving_yards', 'receptions', 'targets', 'carries'] if c in rows]
         recent = json.loads(rows.tail(5)[['season', 'week', 'season_type', 'team'] + metrics].to_json(orient='records'))
         upcoming = None

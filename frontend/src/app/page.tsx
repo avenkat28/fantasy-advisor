@@ -79,7 +79,7 @@ export default function Dashboard() {
           value={weekly.data ? weekly.data.total : "—"}
           note={
             weekly.data
-              ? "RB + WR · selected week"
+              ? "QB + RB + WR + TE + K + D/ST · selected week"
               : "Awaiting selected-week data"
           }
           accent
@@ -143,30 +143,11 @@ export default function Dashboard() {
         />
       ) : (
         <div className="two-columns">
-          <Panel
-            title="Running backs"
-            subtitle="Top 5 · projected full PPR"
-            action={<span className="position">RB</span>}
-          >
-            <ProjectionTable
-              projections={players
-                .filter((p) => p.position === "RB")
-                .slice(0, 5)}
-              compact
-            />
-          </Panel>
-          <Panel
-            title="Wide receivers"
-            subtitle="Top 5 · projected full PPR"
-            action={<span className="position wide">WR</span>}
-          >
-            <ProjectionTable
-              projections={players
-                .filter((p) => p.position === "WR")
-                .slice(0, 5)}
-              compact
-            />
-          </Panel>
+          {[["QB", "Quarterbacks"], ["RB", "Running backs"], ["WR", "Wide receivers"], ["TE", "Tight ends"], ["K", "Kickers"], ["DST", "Defense / special teams"]].map(([position, title]) => (
+            <Panel key={position} title={title} subtitle="Top 5 · projected fantasy points" action={<span className="position">{position}</span>}>
+              <ProjectionTable projections={players.filter((p) => p.position === position).slice(0, 5)} compact />
+            </Panel>
+          ))}
         </div>
       )}
       <div className="dashboard-lower">

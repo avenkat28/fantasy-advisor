@@ -29,7 +29,7 @@ OPTIONAL = [
     "game_id", "opponent_team", "targets", "carries", "attempts", "completions",
     "fumbles_total", "sack_fumbles", "sack_fumbles_lost", "rushing_fumbles",
     "rushing_fumbles_lost", "receiving_fumbles", "receiving_fumbles_lost",
-    "fantasy_points", "fantasy_points_ppr",
+    "fantasy_points", "fantasy_points_ppr", "headshot_url",
 ]
 
 
@@ -62,7 +62,7 @@ def clean_player_stats(raw: pd.DataFrame) -> pd.DataFrame:
     missing = required - set(raw.columns)
     if missing:
         raise ValueError(f"Source schema changed; missing columns: {sorted(missing)}")
-    frame = raw.loc[raw["position"].isin(["QB", "RB", "WR", "TE"])].copy()
+    frame = raw.loc[raw["position"].isin(["QB", "RB", "WR", "TE", "K"])].copy()
     columns = list(dict.fromkeys(IDENTIFIERS + list(SCORING_WEIGHTS) + OPTIONAL))
     frame = frame[[column for column in columns if column in frame.columns]]
     if "player_display_name" in raw.columns:
@@ -73,6 +73,16 @@ def clean_player_stats(raw: pd.DataFrame) -> pd.DataFrame:
     })
     validate_records(frame)
     frame["fantasy_points_ppr"] = calculate_ppr(frame)
+    kickers = frame.position.eq('K')
+    if kickers.any():
+        from backend.scoring import KICKING, weighted_points
+        frame.loc[kickers, 'fantasy_points_ppr'] = weighted_points(raw.loc[frame.index[kickers]], KICKING)
+        for column in KICKING:
+            frame.loc[kickers, column] = raw.loc[frame.index[kickers], column]
+        # PPR offensive statistics are not kicker prediction inputs.
+        for column in list(SCORING_WEIGHTS) + ['targets', 'carries']:
+            if column in frame:
+                frame.loc[kickers, column] = float('nan')
     return frame.sort_values(KEY).reset_index(drop=True)
 
 

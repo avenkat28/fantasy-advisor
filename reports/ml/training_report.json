@@ -1,7 +1,7 @@
 {
   "version": "ppr-v1",
   "seed": 42,
-  "source_sha256": "c64679801468f9fbaa8f034f47c5610eacd6bd4c34b95d30ab66fa51dbbd9382",
+  "source_sha256": "181587fd142b885afcad59bea6178461a2fdf25f6bd93ac7f6b7b79c4fc429ab",
   "schema": {
     "player_id": "str",
     "season": "int32",
@@ -57,47 +57,47 @@
     "player_name": 0,
     "position": 0,
     "team": 0,
-    "player_display_name": 0,
+    "player_display_name": 1710,
     "game_id": 0,
     "opponent_team": 0,
     "game_date": 0,
     "is_home": 0,
-    "fantasy_points_ppr_mean_3": 861,
-    "fantasy_points_ppr_mean_5": 861,
-    "fantasy_points_ppr_mean_10": 861,
-    "passing_yards_mean_3": 861,
-    "passing_yards_mean_5": 861,
-    "rushing_yards_mean_3": 861,
-    "rushing_yards_mean_5": 861,
-    "receiving_yards_mean_3": 861,
-    "receiving_yards_mean_5": 861,
-    "receptions_mean_3": 861,
-    "receptions_mean_5": 861,
-    "targets_mean_3": 861,
-    "targets_mean_5": 861,
-    "carries_mean_3": 861,
-    "carries_mean_5": 861,
-    "touchdowns_mean_3": 861,
-    "touchdowns_mean_5": 861,
-    "fantasy_points_ppr_std_5": 1666,
-    "previous_fantasy_points_ppr": 861,
-    "previous_targets": 861,
-    "previous_receptions": 861,
-    "targets_trend_3_vs_5": 861,
+    "fantasy_points_ppr_mean_3": 949,
+    "fantasy_points_ppr_mean_5": 949,
+    "fantasy_points_ppr_mean_10": 949,
+    "passing_yards_mean_3": 4278,
+    "passing_yards_mean_5": 4278,
+    "rushing_yards_mean_3": 4278,
+    "rushing_yards_mean_5": 4278,
+    "receiving_yards_mean_3": 4278,
+    "receiving_yards_mean_5": 4278,
+    "receptions_mean_3": 4278,
+    "receptions_mean_5": 4278,
+    "targets_mean_3": 4278,
+    "targets_mean_5": 4278,
+    "carries_mean_3": 4278,
+    "carries_mean_5": 4278,
+    "touchdowns_mean_3": 4278,
+    "touchdowns_mean_5": 4278,
+    "fantasy_points_ppr_std_5": 1842,
+    "previous_fantasy_points_ppr": 949,
+    "previous_targets": 4278,
+    "previous_receptions": 4278,
+    "targets_trend_3_vs_5": 4278,
     "prior_games": 0,
-    "days_since_previous_game": 861,
-    "changed_team": 861,
+    "days_since_previous_game": 949,
+    "changed_team": 949,
     "target_fantasy_points_ppr": 0,
-    "opponent_ppr_allowed_position_mean_3": 339,
-    "opponent_ppr_allowed_position_mean_5": 339,
+    "opponent_ppr_allowed_position_mean_3": 403,
+    "opponent_ppr_allowed_position_mean_5": 403,
     "opponent_prior_games": 0,
-    "opponent_passing_yards_allowed_mean_3": 339,
-    "opponent_passing_yards_allowed_mean_5": 339,
-    "opponent_rushing_yards_allowed_mean_3": 339,
-    "opponent_rushing_yards_allowed_mean_5": 339
+    "opponent_passing_yards_allowed_mean_3": 403,
+    "opponent_passing_yards_allowed_mean_5": 403,
+    "opponent_rushing_yards_allowed_mean_3": 403,
+    "opponent_rushing_yards_allowed_mean_5": 403
   },
-  "input_rows": 18533,
-  "excluded_postseason_rows": 831,
+  "input_rows": 21950,
+  "excluded_postseason_rows": 987,
   "features": [
     "is_home",
     "fantasy_points_ppr_mean_3",
@@ -131,6 +131,103 @@
   ],
   "target": "target_fantasy_points_ppr",
   "positions": {
+    "QB": {
+      "counts": {
+        "train": 1327,
+        "validation": 327,
+        "test": 337
+      },
+      "validation_candidates": [
+        {
+          "max_depth": 2,
+          "n_estimators": 150,
+          "mae": 6.5403530273670825,
+          "rmse": 8.042875513875705,
+          "r2": 0.2650828572467059,
+          "bias": 0.3066619388918628
+        },
+        {
+          "max_depth": 2,
+          "n_estimators": 300,
+          "mae": 6.567449977944749,
+          "rmse": 8.09401675285623,
+          "r2": 0.2557070897479212,
+          "bias": 0.6446382487585784
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 150,
+          "mae": 6.522263600177356,
+          "rmse": 8.00932811985577,
+          "r2": 0.2712008524797389,
+          "bias": 0.4845299989076199
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 300,
+          "mae": 6.596544265251276,
+          "rmse": 8.13160164778783,
+          "r2": 0.2487787323489966,
+          "bias": 0.6413535020402447
+        }
+      ],
+      "baseline_cold_start_mean": 13.443029389600603,
+      "selected_hyperparameters": {
+        "objective": "reg:squarederror",
+        "base_score": null,
+        "booster": null,
+        "callbacks": null,
+        "colsample_bylevel": null,
+        "colsample_bynode": null,
+        "colsample_bytree": 0.8,
+        "device": null,
+        "early_stopping_rounds": null,
+        "enable_categorical": true,
+        "eval_metric": null,
+        "feature_types": null,
+        "feature_weights": null,
+        "gamma": null,
+        "grow_policy": null,
+        "importance_type": null,
+        "interaction_constraints": null,
+        "learning_rate": 0.03,
+        "max_bin": null,
+        "max_cat_threshold": null,
+        "max_cat_to_onehot": null,
+        "max_delta_step": null,
+        "max_depth": 3,
+        "max_leaves": null,
+        "min_child_weight": 20,
+        "missing": null,
+        "monotone_constraints": null,
+        "multi_strategy": null,
+        "n_estimators": 150,
+        "n_jobs": 1,
+        "num_parallel_tree": null,
+        "random_state": 42,
+        "reg_alpha": null,
+        "reg_lambda": 10,
+        "sampling_method": null,
+        "scale_pos_weight": null,
+        "subsample": 0.8,
+        "tree_method": "hist",
+        "validate_parameters": null,
+        "verbosity": null
+      },
+      "demo_record": {
+        "player_id": "00-0022942",
+        "player_name": "P.Rivers",
+        "game_id": "2025_15_IND_SEA",
+        "game_date": "2025-12-14 00:00:00",
+        "season": "2025",
+        "week": "15",
+        "team": "IND",
+        "opponent_team": "SEA",
+        "position": "QB",
+        "prior_games": "0"
+      },
+      "demo_prediction": 6.834622383117676
+    },
     "RB": {
       "counts": {
         "train": 3010,
@@ -324,6 +421,297 @@
         "prior_games": "33"
       },
       "demo_prediction": 4.848918437957764
+    },
+    "TE": {
+      "counts": {
+        "train": 2411,
+        "validation": 629,
+        "test": 658
+      },
+      "validation_candidates": [
+        {
+          "max_depth": 2,
+          "n_estimators": 150,
+          "mae": 3.852435473099422,
+          "rmse": 5.275502420716602,
+          "r2": 0.2778052098872539,
+          "bias": 0.06942171658544734
+        },
+        {
+          "max_depth": 2,
+          "n_estimators": 300,
+          "mae": 3.8637817237297565,
+          "rmse": 5.306936474256862,
+          "r2": 0.2691731815811721,
+          "bias": 0.07534163237376135
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 150,
+          "mae": 3.8601092829272177,
+          "rmse": 5.302796113757649,
+          "r2": 0.27031308824440026,
+          "bias": 0.05870123389415408
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 300,
+          "mae": 3.8887989060147197,
+          "rmse": 5.36751646674658,
+          "r2": 0.2523928112987446,
+          "bias": 0.03581086501787127
+        }
+      ],
+      "baseline_cold_start_mean": 5.449008710078806,
+      "selected_hyperparameters": {
+        "objective": "reg:squarederror",
+        "base_score": null,
+        "booster": null,
+        "callbacks": null,
+        "colsample_bylevel": null,
+        "colsample_bynode": null,
+        "colsample_bytree": 0.8,
+        "device": null,
+        "early_stopping_rounds": null,
+        "enable_categorical": true,
+        "eval_metric": null,
+        "feature_types": null,
+        "feature_weights": null,
+        "gamma": null,
+        "grow_policy": null,
+        "importance_type": null,
+        "interaction_constraints": null,
+        "learning_rate": 0.03,
+        "max_bin": null,
+        "max_cat_threshold": null,
+        "max_cat_to_onehot": null,
+        "max_delta_step": null,
+        "max_depth": 2,
+        "max_leaves": null,
+        "min_child_weight": 20,
+        "missing": null,
+        "monotone_constraints": null,
+        "multi_strategy": null,
+        "n_estimators": 150,
+        "n_jobs": 1,
+        "num_parallel_tree": null,
+        "random_state": 42,
+        "reg_alpha": null,
+        "reg_lambda": 10,
+        "sampling_method": null,
+        "scale_pos_weight": null,
+        "subsample": 0.8,
+        "tree_method": "hist",
+        "validate_parameters": null,
+        "verbosity": null
+      },
+      "demo_record": {
+        "player_id": "00-0024243",
+        "player_name": "M.Lewis",
+        "game_id": "2025_10_LV_DEN",
+        "game_date": "2025-11-06 00:00:00",
+        "season": "2025",
+        "week": "10",
+        "team": "DEN",
+        "opponent_team": "LV",
+        "position": "TE",
+        "prior_games": "11"
+      },
+      "demo_prediction": 1.6804721355438232
+    },
+    "K": {
+      "counts": {
+        "train": 1086,
+        "validation": 270,
+        "test": 273
+      },
+      "validation_candidates": [
+        {
+          "max_depth": 2,
+          "n_estimators": 150,
+          "mae": 3.5928066783481176,
+          "rmse": 4.451895641791036,
+          "r2": 0.019016700843122125,
+          "bias": 0.1016539043850369
+        },
+        {
+          "max_depth": 2,
+          "n_estimators": 300,
+          "mae": 3.5753380510542128,
+          "rmse": 4.4273542765894565,
+          "r2": 0.02980235924128416,
+          "bias": 0.05635767512851291
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 150,
+          "mae": 3.592358433758771,
+          "rmse": 4.443748930941611,
+          "r2": 0.022603700932592452,
+          "bias": 0.04134261519820602
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 300,
+          "mae": 3.6001768324110244,
+          "rmse": 4.444836033289734,
+          "r2": 0.02212542918728755,
+          "bias": 0.019787767198350695
+        }
+      ],
+      "baseline_cold_start_mean": 8.287292817679559,
+      "selected_hyperparameters": {
+        "objective": "reg:squarederror",
+        "base_score": null,
+        "booster": null,
+        "callbacks": null,
+        "colsample_bylevel": null,
+        "colsample_bynode": null,
+        "colsample_bytree": 0.8,
+        "device": null,
+        "early_stopping_rounds": null,
+        "enable_categorical": true,
+        "eval_metric": null,
+        "feature_types": null,
+        "feature_weights": null,
+        "gamma": null,
+        "grow_policy": null,
+        "importance_type": null,
+        "interaction_constraints": null,
+        "learning_rate": 0.03,
+        "max_bin": null,
+        "max_cat_threshold": null,
+        "max_cat_to_onehot": null,
+        "max_delta_step": null,
+        "max_depth": 2,
+        "max_leaves": null,
+        "min_child_weight": 20,
+        "missing": null,
+        "monotone_constraints": null,
+        "multi_strategy": null,
+        "n_estimators": 300,
+        "n_jobs": 1,
+        "num_parallel_tree": null,
+        "random_state": 42,
+        "reg_alpha": null,
+        "reg_lambda": 10,
+        "sampling_method": null,
+        "scale_pos_weight": null,
+        "subsample": 0.8,
+        "tree_method": "hist",
+        "validate_parameters": null,
+        "verbosity": null
+      },
+      "demo_record": {
+        "player_id": "00-0023853",
+        "player_name": "M.Prater",
+        "game_id": "2025_10_BUF_MIA",
+        "game_date": "2025-11-09 00:00:00",
+        "season": "2025",
+        "week": "10",
+        "team": "BUF",
+        "opponent_team": "MIA",
+        "position": "K",
+        "prior_games": "29"
+      },
+      "demo_prediction": 7.896397113800049
+    },
+    "DST": {
+      "counts": {
+        "train": 1088,
+        "validation": 270,
+        "test": 274
+      },
+      "validation_candidates": [
+        {
+          "max_depth": 2,
+          "n_estimators": 150,
+          "mae": 4.4127215915256075,
+          "rmse": 5.628243969148907,
+          "r2": 0.008261632016564158,
+          "bias": -0.2487205328764739
+        },
+        {
+          "max_depth": 2,
+          "n_estimators": 300,
+          "mae": 4.445026790654218,
+          "rmse": 5.717071785931402,
+          "r2": -0.02328963917561966,
+          "bias": -0.5781885385513306
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 150,
+          "mae": 4.413360329027529,
+          "rmse": 5.65859637226674,
+          "r2": -0.0024638482793171157,
+          "bias": -0.44140285385979544
+        },
+        {
+          "max_depth": 3,
+          "n_estimators": 300,
+          "mae": 4.468324897465883,
+          "rmse": 5.767580441066455,
+          "r2": -0.041450437668096196,
+          "bias": -0.739985606846986
+        }
+      ],
+      "baseline_cold_start_mean": 6.439338235294118,
+      "selected_hyperparameters": {
+        "objective": "reg:squarederror",
+        "base_score": null,
+        "booster": null,
+        "callbacks": null,
+        "colsample_bylevel": null,
+        "colsample_bynode": null,
+        "colsample_bytree": 0.8,
+        "device": null,
+        "early_stopping_rounds": null,
+        "enable_categorical": true,
+        "eval_metric": null,
+        "feature_types": null,
+        "feature_weights": null,
+        "gamma": null,
+        "grow_policy": null,
+        "importance_type": null,
+        "interaction_constraints": null,
+        "learning_rate": 0.03,
+        "max_bin": null,
+        "max_cat_threshold": null,
+        "max_cat_to_onehot": null,
+        "max_delta_step": null,
+        "max_depth": 2,
+        "max_leaves": null,
+        "min_child_weight": 20,
+        "missing": null,
+        "monotone_constraints": null,
+        "multi_strategy": null,
+        "n_estimators": 150,
+        "n_jobs": 1,
+        "num_parallel_tree": null,
+        "random_state": 42,
+        "reg_alpha": null,
+        "reg_lambda": 10,
+        "sampling_method": null,
+        "scale_pos_weight": null,
+        "subsample": 0.8,
+        "tree_method": "hist",
+        "validate_parameters": null,
+        "verbosity": null
+      },
+      "demo_record": {
+        "player_id": "DST:ARI",
+        "player_name": "Arizona Cardinals D/ST",
+        "game_id": "2025_10_ARI_SEA",
+        "game_date": "2025-11-09 00:00:00",
+        "season": "2025",
+        "week": "10",
+        "team": "ARI",
+        "opponent_team": "SEA",
+        "position": "DST",
+        "prior_games": "42"
+      },
+      "demo_prediction": 4.485005855560303
     }
   },
   "periods": {
@@ -340,6 +728,102 @@
     "matplotlib": "3.11.2"
   },
   "test_metrics": [
+    {
+      "position": "DST",
+      "model": "mean_3",
+      "mae": 4.698296836982969,
+      "rmse": 6.0543630752171715,
+      "r2": -0.2608860420529393,
+      "bias": -0.0072992700729927786
+    },
+    {
+      "position": "DST",
+      "model": "mean_5",
+      "mae": 4.435036496350365,
+      "rmse": 5.7148034176329965,
+      "r2": -0.12341832910278838,
+      "bias": -0.027737226277372344
+    },
+    {
+      "position": "DST",
+      "model": "ridge",
+      "mae": 3.952137628335685,
+      "rmse": 5.299070603222205,
+      "r2": 0.034086300508291534,
+      "bias": -0.8800264892481415
+    },
+    {
+      "position": "DST",
+      "model": "xgboost",
+      "mae": 4.026162988686131,
+      "rmse": 5.281589925669641,
+      "r2": 0.040448539168587594,
+      "bias": -0.2299265821167883
+    },
+    {
+      "position": "K",
+      "model": "mean_3",
+      "mae": 4.366404927178408,
+      "rmse": 5.411477504163526,
+      "r2": -0.22726211371185956,
+      "bias": -0.047514486741006036
+    },
+    {
+      "position": "K",
+      "model": "mean_5",
+      "mae": 4.202729713503195,
+      "rmse": 5.156079926323809,
+      "r2": -0.11415315517702984,
+      "bias": -0.08115307037958971
+    },
+    {
+      "position": "K",
+      "model": "ridge",
+      "mae": 3.858395980957894,
+      "rmse": 4.859725190215383,
+      "r2": 0.010241966864050878,
+      "bias": -0.14961113436025464
+    },
+    {
+      "position": "K",
+      "model": "xgboost",
+      "mae": 3.8838464783882785,
+      "rmse": 4.83231834411867,
+      "r2": 0.021374141993032336,
+      "bias": 0.012646194139194183
+    },
+    {
+      "position": "QB",
+      "model": "mean_3",
+      "mae": 7.167591929618209,
+      "rmse": 9.213946237842023,
+      "r2": 0.02355576558038608,
+      "bias": 0.5694119098358146
+    },
+    {
+      "position": "QB",
+      "model": "mean_5",
+      "mae": 7.1145167565222645,
+      "rmse": 8.963931027920488,
+      "r2": 0.07582735365149951,
+      "bias": 0.8050884676993167
+    },
+    {
+      "position": "QB",
+      "model": "ridge",
+      "mae": 7.000458331580958,
+      "rmse": 8.613646742568987,
+      "r2": 0.14664406911404104,
+      "bias": 1.1595517042996666
+    },
+    {
+      "position": "QB",
+      "model": "xgboost",
+      "mae": 6.73245761750742,
+      "rmse": 8.344622669073487,
+      "r2": 0.19911620862010404,
+      "bias": 1.5894371955489612
+    },
     {
       "position": "RB",
       "model": "mean_3",
@@ -371,6 +855,38 @@
       "rmse": 6.408251110780903,
       "r2": 0.40608515627748043,
       "bias": 0.050036471063291156
+    },
+    {
+      "position": "TE",
+      "model": "mean_3",
+      "mae": 3.723449434099116,
+      "rmse": 5.454308415156444,
+      "r2": 0.18449417999492412,
+      "bias": 0.07634710380529625
+    },
+    {
+      "position": "TE",
+      "model": "mean_5",
+      "mae": 3.5351799305530163,
+      "rmse": 5.149263508707602,
+      "r2": 0.27316151303739045,
+      "bias": 0.12156493561887281
+    },
+    {
+      "position": "TE",
+      "model": "ridge",
+      "mae": 3.441056577260743,
+      "rmse": 4.936290044930431,
+      "r2": 0.33204220643002036,
+      "bias": 0.05772588148599946
+    },
+    {
+      "position": "TE",
+      "model": "xgboost",
+      "mae": 3.5448218711246207,
+      "rmse": 4.970620727842394,
+      "r2": 0.3227189339775407,
+      "bias": 0.4116715656534955
     },
     {
       "position": "WR",

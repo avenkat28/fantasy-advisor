@@ -39,7 +39,7 @@ def setup(tmp_path, monkeypatch):
         (tmp_path / path).mkdir(parents=True)
     players.to_parquet(tmp_path / 'data/processed/player_weekly_2023_2025.parquet')
     schedules.to_parquet(tmp_path / 'data/raw/schedules_2023_2025.parquet')
-    for position, value in [('RB', 9.), ('WR', 10.)]:
+    for position, value in [('QB', 12.), ('RB', 9.), ('WR', 10.), ('TE', 8.), ('K', 7.), ('DST', -1.)]:
         joblib.dump({'model': ConstantModel(value), 'metadata': {'position': position, 'features': FEATURES, 'version': 'test'}}, tmp_path / f'models/ppr-v1/{position}.joblib')
     (tmp_path / 'reports/ml/training_report.json').write_text(json.dumps({'version': 'test', 'periods': {'test': 'fixture'}, 'test_metrics': [{'position': 'WR', 'mae': 1.}]}))
     pd.DataFrame([dict(player_id='a', player_name='a', season=2025, week=4, actual=11., xgboost=10., absolute_error=1.)]).to_csv(tmp_path / 'reports/ml/test_predictions.csv', index=False)
@@ -93,7 +93,7 @@ def test_position_models_schema_weekly_comparison(client):
     ('/api/projections/a?season=2025&week=19', 422, 'invalid_request'),
     ('/api/projections/a?season=2025&week=1', 422, 'insufficient_data'),
     ('/api/projections/a?season=x&week=4', 422, 'invalid_request'),
-    ('/api/projections?season=2025&week=4&position=QB', 422, 'invalid_request'),
+    ('/api/projections?season=2025&week=4&position=P', 422, 'invalid_request'),
     ('/api/players?limit=0', 422, 'invalid_request'),
 ])
 def test_errors(client, path, status, code):
@@ -159,7 +159,7 @@ def test_comparison_tie_and_threshold():
 
 def test_unsupported_bye_and_internal_errors(setup):
     data, service, _ = setup
-    data.players.loc[data.players.player_id.eq('a'), 'position'] = 'QB'
+    data.players.loc[data.players.player_id.eq('a'), 'position'] = 'P'
     with TestClient(create_app(data, service), raise_server_exceptions=False) as c:
         assert c.get('/api/projections/a?season=2025&week=4').status_code == 422
         data.players.loc[data.players.player_id.eq('a'), 'position'] = 'WR'
@@ -210,3 +210,17 @@ def test_concurrent_cold_feature_requests_build_once(setup):
             results = list(pool.map(lambda _: service.day_features(2025, 4, '2025-09-29'), range(3)))
         assert build.call_count == 1
         assert all(result is results[0] for result in results)
+
+
+@pytest.mark.parametrize('position', ['QB', 'TE'])
+def test_additional_positions_search_project_and_compare(setup, position):
+    data, service, _ = setup
+    data.players.loc[data.players.player_id.eq('a'), 'position'] = position
+    with TestClient(create_app(data, service)) as client:
+        assert any(p['player_id'] == 'a' for p in client.get('/api/players').json())
+        response = client.get(f'/api/projections?season=2025&week=4&position={position}')
+        assert response.status_code == 200
+        projections = response.json()['projections']
+        assert projections and all(p['position'] == position for p in projections)
+        assert client.get('/api/projections/a?season=2025&week=4').status_code == 200
+        assert client.get('/api/compare?player1_id=a&player2_id=a&season=2025&week=4').status_code == 200

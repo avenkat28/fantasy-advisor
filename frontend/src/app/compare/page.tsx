@@ -53,7 +53,7 @@ export default function ComparisonPage() {
         title="Build your comparison"
         subtitle={
           selection
-            ? `Full PPR · ${selection.season} week ${selection.week} · change week in the header`
+            ? `Fantasy points · ${selection.season} week ${selection.week} · change week in the header`
             : "Choose a season and week in the header"
         }
       >
@@ -126,13 +126,13 @@ export default function ComparisonPage() {
               </h2>
               <p>{result.data.explanation}</p>
               <small>
-                Close-call threshold: {result.data.close_call_threshold} PPR ·
+                Close-call threshold: {result.data.close_call_threshold} Points ·
                 projected difference:{" "}
                 <NumberValue
                   value={Math.abs(result.data.difference)}
                   digits={2}
                 />{" "}
-                PPR
+                Points
               </small>
             </div>
           </div>
@@ -191,20 +191,20 @@ function ComparisonCard({
         <PositionBadge position={player.position} />
         <div>
           <NumberValue value={player.projected_ppr_points} />
-          <span>PROJECTED PPR</span>
+          <span>PROJECTED POINTS</span>
         </div>
       </div>
       <p>{player.injury_description}{player.practice_status ? ` · ${player.practice_status}` : ""}</p>
       <p>{player.injury_adjustment}</p>
       <dl className="facts">
         <div>
-          <dt>Recent PPR · up to 3 games</dt>
+          <dt>Recent Points · up to 3 games</dt>
           <dd>
             <NumberValue value={player.recent_ppr_mean_3} />
           </dd>
         </div>
         <div>
-          <dt>Opponent PPR allowed to {player.position} · up to 3 games</dt>
+          <dt>Opponent Points allowed to {player.position} · up to 3 games</dt>
           <dd>
             <NumberValue
               value={

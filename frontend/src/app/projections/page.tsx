@@ -43,7 +43,7 @@ export default function ProjectionsPage() {
       <PageHeading
         eyebrow="THE WEEKLY BOARD"
         title="Weekly projections"
-        description="Find the opportunity. Compare every available RB and WR projection."
+        description="Find the opportunity. Compare every available QB, RB, WR, TE, K and D/ST projection."
       />
       <Panel
         title={
@@ -51,15 +51,20 @@ export default function ProjectionsPage() {
             ? `${selection.season} · Week ${selection.week}`
             : "Select a week"
         }
-        subtitle="Pregame estimates · full-PPR scoring"
-        action={<span className="tag">RB + WR</span>}
+        subtitle="Full PPR for offense · default scoring for K and D/ST"
+        action={<span className="tag">QB + RB + WR + TE + K + D/ST</span>}
       >
+        <p className="panel-footnote">K: field goals 0–39 yd = 3, 40–49 = 4, 50+ = 5; PAT = 1; no miss penalty. D/ST: sacks = 1; takeaways, safeties and blocks = 2; TDs = 6; points-allowed tiers apply to the opponent’s final score.</p>
         <div className="table-toolbar">
           <div className="segmented" aria-label="Position filter">
             {[
               ["", "All positions"],
+              ["QB", "Quarterbacks"],
               ["RB", "Running backs"],
               ["WR", "Wide receivers"],
+              ["TE", "Tight ends"],
+              ["K", "Kickers"],
+              ["DST", "Defense / special teams"],
             ].map(([value, label]) => (
               <button
                 key={value}

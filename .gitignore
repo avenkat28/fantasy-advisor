@@ -32,3 +32,18 @@ frontend/test-results/
 !data/player_headshots.json
 !data/forecasts/
 !data/forecasts/**
+
+# Separately trained QB/TE baseline bundles required by hosted inference
+!models/
+models/*
+!models/ppr-v1/
+models/ppr-v1/*
+!models/ppr-v1/QB.joblib
+!models/ppr-v1/TE.joblib
+!models/ppr-v1/QB_metadata.json
+!models/ppr-v1/TE_metadata.json
+
+!models/ppr-v1/K.joblib
+!models/ppr-v1/DST.joblib
+!models/ppr-v1/K_metadata.json
+!models/ppr-v1/DST_metadata.json

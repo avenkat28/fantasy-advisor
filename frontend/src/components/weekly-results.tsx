@@ -9,7 +9,7 @@ export function WeeklyResultsPanel() {
   const { selection } = useSeason();
   const load = useCallback((signal: AbortSignal) => api.results(selection!, signal), [selection]);
   const result = useResource(selection ? load : null);
-  return <Panel title={`Weekly results${selection ? ` · ${selection.season} week ${selection.week}` : ""}`} subtitle="Saved pregame forecasts versus actual PPR">
+  return <Panel title={`Weekly results${selection ? ` · ${selection.season} week ${selection.week}` : ""}`} subtitle="Saved pregame forecasts versus actual points">
     {result.loading ? <Loading /> : result.error ? <ErrorState error={result.error} retry={result.retry} /> : <>
       <p>{result.data?.message}</p>
       {result.data?.metrics.map(m => <p key={m.model}><strong>{m.model}</strong> · {m.count} matched games · MAE <NumberValue value={m.mae} digits={2} /> · RMSE <NumberValue value={m.rmse} digits={2} /> · Bias <NumberValue value={m.bias} digits={2} /></p>)}

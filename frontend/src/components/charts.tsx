@@ -28,13 +28,13 @@ const tick = { fill: "#98a7b7", fontSize: 11 };
 export function RecentChart({ games }: { games: HistoricalGame[] }) {
   const rows = games.map((g) => ({
     label: `${g.season} W${g.week}`,
-    PPR: g.fantasy_points_ppr ?? null,
+    Points: g.fantasy_points_ppr ?? null,
   }));
   return (
     <div
       className="chart"
       role="img"
-      aria-label="Recent historical full-PPR points; exact values are in the recent games table"
+      aria-label="Recent historical fantasy points; exact values are in the recent games table"
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
@@ -52,7 +52,7 @@ export function RecentChart({ games }: { games: HistoricalGame[] }) {
           <Tooltip contentStyle={tooltipStyle} />
           <Line
             type="monotone"
-            dataKey="PPR"
+            dataKey="Points"
             stroke="#64e3b0"
             strokeWidth={3}
             dot={{ r: 4, fill: "#101b25", strokeWidth: 2 }}
@@ -76,7 +76,7 @@ export function RankingChart({ players }: { players: Projection[] }) {
             .slice(0, 7)
             .map((p) => ({
               name: p.player_name,
-              "Projected PPR": p.projected_ppr_points,
+              "Projected Points": p.projected_ppr_points,
             }))}
           layout="vertical"
           margin={{ left: 16, right: 20 }}
@@ -97,7 +97,7 @@ export function RankingChart({ players }: { players: Projection[] }) {
           />
           <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#ffffff05" }} />
           <Bar
-            dataKey="Projected PPR"
+            dataKey="Projected Points"
             fill="#64e3b0"
             barSize={12}
             radius={[0, 4, 4, 0]}
@@ -109,11 +109,12 @@ export function RankingChart({ players }: { players: Projection[] }) {
 }
 export function MetricsChart({ metrics }: { metrics: Metric[] }) {
   const models = Array.from(new Set(metrics.map((m) => m.model)));
-  const rows = models.map((model) => ({
-    model,
-    RB: metrics.find((m) => m.model === model && m.position === "RB")?.mae,
-    WR: metrics.find((m) => m.model === model && m.position === "WR")?.mae,
-  }));
+  const positions = Array.from(new Set(metrics.map((m) => m.position)));
+  const colors = ["#64e3b0", "#77aaf8", "#f0b873", "#bd9afa", "#ee8eaa", "#86d7de"];
+  const rows = models.map((model) => Object.fromEntries([
+    ["model", model],
+    ...positions.map((position) => [position, metrics.find((m) => m.model === model && m.position === position)?.mae]),
+  ]));
   return (
     <div
       className="chart"
@@ -132,18 +133,7 @@ export function MetricsChart({ metrics }: { metrics: Metric[] }) {
           <YAxis tick={tick} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#ffffff05" }} />
           <Legend />
-          <Bar
-            dataKey="RB"
-            name="RB MAE"
-            fill="#64e3b0"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="WR"
-            name="WR MAE"
-            fill="#77aaf8"
-            radius={[4, 4, 0, 0]}
-          />
+          {positions.map((position, index) => <Bar key={position} dataKey={position} name={`${position === "DST" ? "D/ST" : position} MAE`} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} />)}
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -154,7 +144,7 @@ export function AccuracyChart({ records }: { records: HistoryRecord[] }) {
     <div
       className="chart"
       role="img"
-      aria-label="Held-out predictions versus actual PPR; exact values are in the accuracy table"
+      aria-label="Held-out predictions versus actual points; exact values are in the accuracy table"
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart

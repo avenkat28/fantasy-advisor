@@ -2,6 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
 import { health } from "./fixtures";
 describe("typed HTTP client", () => {
+  it("fetches without newer AbortSignal composition APIs", async () => {
+    const any = vi.spyOn(AbortSignal, "any").mockImplementation(() => { throw new TypeError("unsupported"); });
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => { throw new TypeError("unsupported"); });
+    try {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(health)));
+      expect(await api.health(new AbortController().signal)).toEqual(health);
+      expect(any).not.toHaveBeenCalled();
+      expect(timeout).not.toHaveBeenCalled();
+    } finally {
+      any.mockRestore();
+      timeout.mockRestore();
+    }
+  });
   it("uses the hosted app origin when a localhost API URL was configured", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://localhost:8000");
     vi.stubGlobal("window", { location: { hostname: "fantasy.example.com" } });

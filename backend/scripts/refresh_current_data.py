@@ -29,7 +29,7 @@ def normalize_rosters(raw: pd.DataFrame, observed_at: str) -> pd.DataFrame:
     if 'game_type' in raw:
         raw = raw[raw.game_type.eq('REG')]
     roster = raw.rename(columns={'gsis_id': 'player_id', 'full_name': 'player_name', 'status': 'roster_status'}).copy()
-    roster = roster[roster.position.isin(['RB', 'WR']) & roster.player_id.notna()]
+    roster = roster[roster.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST']) & roster.player_id.notna()]
     roster['observed_at'] = observed_at
     # Photos are optional and must never block a valid statistics refresh.
     if 'headshot_url' not in roster:
@@ -46,10 +46,15 @@ def normalize_rosters(raw: pd.DataFrame, observed_at: str) -> pd.DataFrame:
 
 def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
                      schedules: pd.DataFrame, raw_rosters: pd.DataFrame,
-                     observed_at: str, injuries: pd.DataFrame | None = None, injury_error: str | None = None) -> dict:
+                     observed_at: str, injuries: pd.DataFrame | None = None, injury_error: str | None = None,
+                     team_stats: pd.DataFrame | None = None, teams: pd.DataFrame | None = None,
+                     historical_extra: pd.DataFrame | None = None) -> dict:
     if schedules.empty or not schedules.season.eq(season).any():
         raise ValueError(f'Source has no {season} schedule')
     stats = clean_player_stats(raw_stats)
+    if team_stats is not None:
+        from backend.scoring import defense_records
+        stats = pd.concat([stats, defense_records(team_stats, schedules, teams)], ignore_index=True)
     stats = stats[stats.season.eq(season)]
     if stats.empty:
         raise ValueError(f'Source has no {season} player statistics')
@@ -68,6 +73,8 @@ def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
         historical = root / previous['players']
         schedule_path = root / previous['schedules']
     old = pd.read_parquet(historical)
+    if historical_extra is not None:
+        old = pd.concat([old[~old.position.isin(['K', 'DST'])], historical_extra], ignore_index=True)
     old_schedules = pd.read_parquet(schedule_path)
     combined = pd.concat([old[old.season.ne(season)], stats], ignore_index=True)
     schedules = pd.concat([old_schedules[old_schedules.season.ne(season)], schedules[schedules.season.eq(season)]], ignore_index=True)
@@ -109,6 +116,10 @@ def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
                     sources=['nflreadpy.load_player_stats', 'nflreadpy.load_schedules', 'nflreadpy.load_rosters_weekly'] + (['nflreadpy.load_injuries'] if injury_path else []),
                     latest_statistical_game=attached.game_date.max().date().isoformat(),
                     rows=dict(players=len(combined), schedules=len(schedules), rosters=len(roster)))
+    if team_stats is not None:
+        from backend.scoring import SCORING_POLICY
+        manifest['scoring_policy'] = SCORING_POLICY
+        manifest['sources'] += ['nflreadpy.load_team_stats', 'nflreadpy.load_teams']
     (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     temporary = manifest_path.with_suffix('.tmp')
     temporary.write_text(json.dumps(manifest, indent=2) + '\n')
@@ -130,8 +141,10 @@ def refresh(root: Path, season: int, loader=None) -> dict:
             injury_error = 'No injury reports published for this season.'
     except Exception as error:
         injury_error = f'Injury feed unavailable: {type(error).__name__}'
+    team_stats = loader.load_team_stats([season], summary_level='week').to_pandas() if hasattr(loader, 'load_team_stats') else None
+    teams = loader.load_teams().to_pandas() if hasattr(loader, 'load_teams') else None
     observed = datetime.now(timezone.utc).isoformat()
-    return publish_snapshot(root, season, stats, schedules, rosters, observed, injuries, injury_error)
+    return publish_snapshot(root, season, stats, schedules, rosters, observed, injuries, injury_error, team_stats, teams)
 
 
 def main():

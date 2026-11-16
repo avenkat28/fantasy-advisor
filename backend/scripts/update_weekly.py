@@ -25,8 +25,8 @@ def main():
         refine(ROOT, args.season, activate=True)
     data = DataRepository(ROOT)
     service = PredictionService(data)
-    if not all(p in service.models for p in ['RB', 'WR']):
-        raise RuntimeError('Both trained models are required to capture forecasts')
+    if not all(p in service.models for p in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']):
+        raise RuntimeError('All six trained models are required to capture forecasts')
     now = pd.Timestamp.now().normalize()
     games = data.context[data.context.season.eq(args.season) & data.context.season_type.eq('REG')
                          & data.context.game_date.ge(now) & data.context.game_date.le(now + pd.Timedelta(days=14))]

@@ -52,6 +52,7 @@ class Projection(Player):
     availability: str = "unknown"
     injury_multiplier: float = 1.0
     injury_policy: str | None = None
+    scoring_policy: str | None = None
     model_version: str
     prediction_type: Literal['pregame'] = 'pregame'
     prediction_timestamp: str

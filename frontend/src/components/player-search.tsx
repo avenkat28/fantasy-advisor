@@ -71,7 +71,7 @@ export function PlayerSearch({
           ) : result.data?.length === 0 ? (
             <EmptyState
               title="No players found"
-              message="Try a partial first or last name. Only RB and WR are supported."
+              message="Try a partial first or last name. QB, RB, WR, TE, K and D/ST are supported."
             />
           ) : (
             <ul

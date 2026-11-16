@@ -20,7 +20,7 @@ def check_deployment(root: Path = ROOT) -> dict:
     if repository.players.empty or repository.context.empty or repository.rosters.empty:
         raise ValueError('Published player, schedule and roster datasets must be nonempty.')
     predictions = PredictionService(repository)
-    missing = {'RB', 'WR'} - set(predictions.models)
+    missing = {'QB', 'RB', 'WR', 'TE', 'K', 'DST'} - set(predictions.models)
     if missing:
         raise ValueError(f'Missing or incompatible model bundles: {sorted(missing)}')
     if not repository.report or repository.history is None:

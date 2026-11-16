@@ -70,7 +70,7 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
 
     @app.get('/api/health', response_model=s.Health)
     def health(request: Request):
-        models = {p: p in request.app.state.predictions.models for p in ['RB', 'WR']}
+        models = {p: p in request.app.state.predictions.models for p in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']}
         data = request.app.state.data
         available = not data.players.empty and not data.context.empty and (data.snapshot is None or not data.rosters.empty)
         snapshot = None
@@ -93,7 +93,7 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
         return request.app.state.data.details(player_id)
 
     @app.get('/api/projections', response_model=s.WeeklyProjections)
-    def weekly(request: Request, season: Season, week: Week, position: Literal['RB', 'WR'] | None = None,
+    def weekly(request: Request, season: Season, week: Week, position: Literal['QB', 'RB', 'WR', 'TE', 'K', 'DST'] | None = None,
                limit: Limit = 50, offset: Offset = 0):
         predictions, unavailable = request.app.state.predictions.weekly(season, week, position)
         return dict(projections=predictions[offset:offset + limit], unavailable=unavailable,

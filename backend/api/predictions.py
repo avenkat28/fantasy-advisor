@@ -48,7 +48,7 @@ def pregame_rows(players: pd.DataFrame, schedules: pd.DataFrame, games: pd.DataF
         latest = candidates[candidates.player_id.isin(latest.player_id)].copy()
     placeholders = []
     for _, game in games.iterrows():
-        eligible = latest[latest.team.eq(game.team) & latest.position.isin(['RB', 'WR'])]
+        eligible = latest[latest.team.eq(game.team) & latest.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST'])]
         if candidates is None:
             eligible = eligible[eligible.season.eq(game.season)]
         for _, last in eligible.iterrows():
@@ -77,8 +77,10 @@ class PredictionService:
         directory = model_dir or Path(os.getenv('FANTASY_MODELS', str(default)))
         self.models = {}
         self._feature_lock = RLock()
-        for position in ['RB', 'WR']:
+        for position in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
             path = directory / f'{position}.joblib'
+            if not path.exists() and position in ['QB', 'TE', 'K', 'DST'] and model_dir is None and not os.getenv('FANTASY_MODELS'):
+                path = repository.root / 'models/ppr-v1' / f'{position}.joblib'
             if path.exists():
                 try:
                     bundle = joblib.load(path)
@@ -125,7 +127,8 @@ class PredictionService:
             if key not in lookups['rosters']:
                 lookups['rosters'][key] = self.data.roster_for_week(season, week, cutoff)
             return lookups['rosters'][key]
-        roster_based = self.data.roster_season(season)
+        is_defense = player_id.startswith('DST:')
+        roster_based = self.data.roster_season(season) and not is_defense
         if roster_based:
             # Resolve the team from the weekly snapshot, then enforce its actual game's cutoff.
             roster = roster_at(games.game_date.max())
@@ -134,14 +137,15 @@ class PredictionService:
                 raise APIError(422, 'roster_unavailable', 'Player has no fresh observed roster record for the requested week.')
             last = selected.iloc[-1]
         else:
-            candidates = self.data.candidates(season, week, games.game_date.min())
+            candidates = (self.data.defense_candidates(season, week) if is_defense else
+                          self.data.candidates(season, week, games.game_date.min()))
             selected = candidates[candidates.player_id.eq(player_id)]
             if selected.empty:
                 raise APIError(422, 'insufficient_data', 'No earlier appearance in the requested season; roster membership cannot be established.')
             last = selected.iloc[-1]
         position = last.position
-        if position not in ['RB', 'WR']:
-            raise APIError(422, 'unsupported_position', 'Only RB and WR are supported.')
+        if position not in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
+            raise APIError(422, 'unsupported_position', 'Only QB, RB, WR, TE, K and DST are supported.')
         if position not in self.models:
             raise APIError(503, 'model_unavailable', f'The trained {position} model is unavailable or incompatible.')
         # Existing ppr-v1 fits 2023/24. Earlier retrospective predictions would use a future-trained model.
@@ -186,6 +190,8 @@ class PredictionService:
                   'Injury risk multipliers are configurable policy estimates, not calibrated probabilities or medical severity assessments. Missing reports do not establish health.',
                   'ppr-v1 trained on 2023–2024; validation selected on 2025 weeks 1–9.',
                   'Same-day statistics excluded; feature_cutoff is the game-date boundary. Source snapshots may contain later corrections.']
+        if position in ['K', 'DST']:
+            limits.append('Default K/DST scoring: field goals 3/4/5 by distance, PAT 1, no miss penalties; D/ST includes defense and special teams, with points-allowed tiers based on the opponent final score. League scoring may differ.')
         if roster_based and int(last.week) != week:
             limits.append('Upcoming-week preview uses the prior weekly roster; team and availability may change.')
         if roster_based:
@@ -201,7 +207,7 @@ class PredictionService:
                     missing_features=inputs.columns[inputs.isna().iloc[0]].tolist(),
                     recent_ppr_mean_3=None if pd.isna(row.fantasy_points_ppr_mean_3) else float(row.fantasy_points_ppr_mean_3),
                     matchup_features={c: None if pd.isna(row[c]) else float(row[c]) for c in FEATURES if c.startswith('opponent_')},
-                    eligibility_source=('provisional_prior_week_roster' if int(last.week) != week else 'weekly_roster') if roster_based else 'historical_appearance',
+                    eligibility_source='team_schedule' if is_defense else ('provisional_prior_week_roster' if int(last.week) != week else 'weekly_roster') if roster_based else 'historical_appearance',
                     roster_week=int(last.week) if roster_based else None,
                     roster_status=str(last.roster_status) if roster_based else None,
                     roster_observed_at=last.observed_at.isoformat() if roster_based else None,
@@ -209,6 +215,13 @@ class PredictionService:
                     limitations=limits), inputs
 
     def injury_adjustment(self, metadata, value):
+        from backend.scoring import SCORING_POLICY
+        if metadata['position'] in ['K', 'DST']:
+            metadata = {**metadata, 'scoring_policy': SCORING_POLICY}
+        if metadata['position'] == 'DST':
+            return {**metadata, 'base_projected_ppr_points': float(value),
+                    'projected_ppr_points': float(value), 'availability': 'team_unit',
+                    'injury_adjustment': 'Team defense/special teams; individual injury multipliers do not apply.'}
         return adjust_injury(self.data, metadata, value)
 
     def _predict(self, position: str, inputs: pd.DataFrame) -> np.ndarray:
@@ -226,13 +239,14 @@ class PredictionService:
         games = self.schedule(season, week)
         if self.data.roster_season(season):
             latest = self.data.roster_for_week(season, week, games.game_date.max())
-            if latest.empty:
+            if latest.empty and position != 'DST':
                 raise APIError(422, 'roster_unavailable', 'No fresh weekly roster for this week. Refresh local data when the source publishes it.')
+            latest = pd.concat([latest, self.data.defense_candidates(season, week)], ignore_index=True)
         else:
             latest = self.data.candidates(season, week, games.game_date.min())
-        latest = latest[latest.position.isin([position] if position else ['RB', 'WR'])]
+        latest = latest[latest.position.isin([position] if position else ['QB', 'RB', 'WR', 'TE', 'K', 'DST'])]
         predictions, unavailable = [], []
-        prepared = {'RB': [], 'WR': []}
+        prepared = {p: [] for p in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']}
         history = self.data.players[self.data.players.player_id.isin(latest.player_id)].sort_values('game_date')
         lookups = {'games': games, 'records': dict(tuple(history.groupby('player_id', sort=False))), 'rosters': {}}
         for player_id in latest.player_id:

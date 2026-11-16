@@ -61,8 +61,8 @@ export function PlayerProfile({ id }: { id: string }) {
         <Stat
           label={
             selection
-              ? `PROJECTED PPR · ${selection.season} W${selection.week}`
-              : "PROJECTED PPR"
+              ? `PROJECTED POINTS · ${selection.season} W${selection.week}`
+              : "PROJECTED POINTS"
           }
           value={
             projection.loading ? (
@@ -79,17 +79,17 @@ export function PlayerProfile({ id }: { id: string }) {
           accent
         />
         <Stat
-          label="RECENT PPR · UP TO 3 GAMES"
+          label="RECENT POINTS · UP TO 3 GAMES"
           value={<NumberValue value={average(recent.slice(-3))} />}
           note={`${recent.slice(-3).length} observed historical games`}
         />
         <Stat
-          label="RECENT PPR · UP TO 5 GAMES"
+          label="RECENT POINTS · UP TO 5 GAMES"
           value={<NumberValue value={average(recent.slice(-5))} />}
           note={`${recent.slice(-5).length} observed historical games`}
         />
         <Stat
-          label="HISTORICAL PPR AVERAGE"
+          label="HISTORICAL POINTS AVERAGE"
           value={
             <NumberValue
               value={player.historical_averages.fantasy_points_ppr}
@@ -104,7 +104,7 @@ export function PlayerProfile({ id }: { id: string }) {
       <div className="two-columns profile-columns">
         <Panel
           title="Recent production"
-          subtitle="Historical full-PPR points · latest five recorded appearances"
+          subtitle="Historical fantasy points · latest five recorded appearances"
         >
           {recent.some((g) => g.fantasy_points_ppr != null) ? (
             <RecentChart games={recent} />
@@ -129,7 +129,7 @@ export function PlayerProfile({ id }: { id: string }) {
             <dl className="facts">
               <div>
                 <dt>
-                  Opponent PPR allowed to {player.position} · up to 3 games
+                  Opponent Points allowed to {player.position} · up to 3 games
                 </dt>
                 <dd>
                   <NumberValue
@@ -141,7 +141,7 @@ export function PlayerProfile({ id }: { id: string }) {
                 </dd>
               </div>
               <div>
-                <dt>Opponent PPR allowed · up to 5 games</dt>
+                <dt>Opponent Points allowed · up to 5 games</dt>
                 <dd>
                   <NumberValue
                     value={
@@ -203,7 +203,7 @@ export function PlayerProfile({ id }: { id: string }) {
                     "Season / week",
                     "Type",
                     "Team",
-                    "PPR",
+                    "Points",
                     "Rush yds",
                     "Rec yds",
                     "Rec",
@@ -284,8 +284,8 @@ export function PlayerProfile({ id }: { id: string }) {
                 <thead>
                   <tr>
                     <th scope="col">Season / week</th>
-                    <th scope="col">Predicted PPR</th>
-                    <th scope="col">Actual PPR</th>
+                    <th scope="col">Predicted Points</th>
+                    <th scope="col">Actual Points</th>
                     <th scope="col">Absolute error</th>
                   </tr>
                 </thead>

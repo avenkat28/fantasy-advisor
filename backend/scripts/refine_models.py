@@ -22,7 +22,7 @@ from backend.scripts.train_models import validate_dataset, xgb_pipeline
 
 
 def recent_split(frame, season, holdout_weeks=2):
-    regular = frame[frame.season_type.eq('REG') & frame.position.isin(['RB', 'WR'])].copy()
+    regular = frame[frame.season_type.eq('REG') & frame.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST'])].copy()
     weeks = sorted(regular.loc[regular.season.eq(season), 'week'].unique())
     if holdout_weeks < 1 or len(weeks) <= holdout_weeks:
         raise ValueError('Insufficient current-season weeks for chronological evaluation')
@@ -57,7 +57,7 @@ def refine(root=ROOT, season=2026, holdout_weeks=2, activate=False):
                   evaluation_policy='Recent observed games, including a possibly incomplete week. Fixed hyperparameters; no tuning on evaluation outcomes. Final candidate refit includes evaluation games and requires future prospective monitoring.',
                   production_changed=False)
     predictions = []
-    for position in ['RB', 'WR']:
+    for position in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
         fit = train[train.position.eq(position)]
         held = test[test.position.eq(position)]
         if min(len(fit), len(held)) < 30:

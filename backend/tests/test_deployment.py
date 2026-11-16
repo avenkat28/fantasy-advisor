@@ -16,7 +16,7 @@ def test_preflight_accepts_complete_published_snapshot(setup):
     data, _ = published(setup)
     result = check_deployment(data.root)
     assert result['ready']
-    assert result['models'] == ['RB', 'WR']
+    assert result['models'] == ['DST', 'K', 'QB', 'RB', 'TE', 'WR']
 
 
 def test_preflight_rejects_missing_manifest(tmp_path):
