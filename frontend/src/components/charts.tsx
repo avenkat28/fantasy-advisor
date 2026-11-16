@@ -17,14 +17,14 @@ import type {
   Metric,
   Projection,
 } from "@/lib/types";
-const grid = "#27323e";
+const grid = "var(--border)";
 const tooltipStyle = {
-  background: "#14202b",
-  border: "1px solid #344353",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 10,
-  color: "#ecf3fa",
+  color: "var(--text)",
 };
-const tick = { fill: "#98a7b7", fontSize: 11 };
+const tick = { fill: "var(--muted)", fontSize: 11 };
 export function RecentChart({ games }: { games: HistoricalGame[] }) {
   const rows = games.map((g) => ({
     label: `${g.season} W${g.week}`,
@@ -53,9 +53,9 @@ export function RecentChart({ games }: { games: HistoricalGame[] }) {
           <Line
             type="monotone"
             dataKey="Points"
-            stroke="#64e3b0"
+            stroke="var(--mint)"
             strokeWidth={3}
-            dot={{ r: 4, fill: "#101b25", strokeWidth: 2 }}
+            dot={{ r: 4, fill: "var(--surface)", strokeWidth: 2 }}
             connectNulls={false}
           />
         </LineChart>
@@ -95,10 +95,10 @@ export function RankingChart({ players }: { players: Projection[] }) {
             axisLine={false}
             tickLine={false}
           />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#ffffff05" }} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--surface-raised)" }} />
           <Bar
             dataKey="Projected Points"
-            fill="#64e3b0"
+            fill="var(--mint)"
             barSize={12}
             radius={[0, 4, 4, 0]}
           />
@@ -110,7 +110,7 @@ export function RankingChart({ players }: { players: Projection[] }) {
 export function MetricsChart({ metrics }: { metrics: Metric[] }) {
   const models = Array.from(new Set(metrics.map((m) => m.model)));
   const positions = Array.from(new Set(metrics.map((m) => m.position)));
-  const colors = ["#64e3b0", "#77aaf8", "#f0b873", "#bd9afa", "#ee8eaa", "#86d7de"];
+  const colors = ["var(--mint)", "var(--blue)", "var(--warning)", "var(--chart-purple)", "var(--chart-rose)", "var(--chart-teal)"];
   const rows = models.map((model) => Object.fromEntries([
     ["model", model],
     ...positions.map((position) => [position, metrics.find((m) => m.model === model && m.position === position)?.mae]),
@@ -131,7 +131,7 @@ export function MetricsChart({ metrics }: { metrics: Metric[] }) {
             tickLine={false}
           />
           <YAxis tick={tick} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#ffffff05" }} />
+          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--surface-raised)" }} />
           <Legend />
           {positions.map((position, index) => <Bar key={position} dataKey={position} name={`${position === "DST" ? "D/ST" : position} MAE`} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} />)}
         </BarChart>
@@ -165,10 +165,10 @@ export function AccuracyChart({ records }: { records: HistoryRecord[] }) {
           <YAxis tick={tick} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={tooltipStyle} />
           <Legend />
-          <Line dataKey="Actual" stroke="#64e3b0" strokeWidth={2} />
+          <Line dataKey="Actual" stroke="var(--mint)" strokeWidth={2} />
           <Line
             dataKey="Predicted"
-            stroke="#77aaf8"
+            stroke="var(--blue)"
             strokeDasharray="5 5"
             strokeWidth={2}
           />

@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   ArrowLeftRight,
   BarChart3,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { SeasonProvider, useSeason, WeekPicker } from "./season-provider";
+import { ThemeToggle } from "./theme-toggle";
 import { dateLabel } from "./ui";
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -53,13 +53,9 @@ function Frame({ children }: { children: ReactNode }) {
       </a>
       <aside className="sidebar">
         <Link href="/" className="brand" aria-label="FantasyAdvisor dashboard">
-          <span className="brand-icon">
-            <Activity size={24} />
-          </span>
-          <span>
-            Fantasy<span className="brand-light">Advisor</span>
-            <small>THE NUMBERS. YOUR EDGE.</small>
-          </span>
+          {/* The supplied wordmark stays intact on a neutral brand tile in both themes. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/brand/fantasy-advisor-logo.png" alt="Fantasy Advisor" width="196" height="160" />
         </Link>
         <div className="nav-caption">WORKSPACE</div>
         <Navigation />
@@ -89,7 +85,7 @@ function Frame({ children }: { children: ReactNode }) {
             </span>{" "}
             NFL Fantasy Intelligence <span className="tag">FULL PPR</span>
           </div>
-          <WeekPicker />
+          <div className="topbar-controls"><ThemeToggle /><WeekPicker /></div>
         </header>
         <main id="main-content" tabIndex={-1}>
           {children}

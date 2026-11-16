@@ -1,0 +1,2 @@
+// Runs before the page paints, so a saved preference never flashes the wrong theme.
+export const themeInitializer = `(function(){var t;try{t=localStorage.getItem('fantasy-advisor-theme')}catch(e){}if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=t==='dark'?'#091b26':'#f3f6f4'})()`;
