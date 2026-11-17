@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description:
     "Full-PPR NFL projections, player research, and start/sit decisions grounded in historical data.",
 };
-export const viewport: Viewport = { themeColor: "#091b26" };
+export const viewport: Viewport = { themeColor: "#191b1a" };
 
 export default function RootLayout({
   children,

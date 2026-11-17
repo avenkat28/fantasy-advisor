@@ -8,7 +8,7 @@ type Theme = "light" | "dark";
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#091b26" : "#f3f6f4");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#191b1a" : "#f4f1e9");
   window.dispatchEvent(new Event("fantasy-theme-change"));
 }
 
