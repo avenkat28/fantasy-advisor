@@ -28,3 +28,25 @@ def test_refuses_insufficient_or_overlapping_dates():
     frame.loc[frame.season.eq(2025), 'game_date'] = '2026-12-01'
     with pytest.raises(ValueError, match='chronological'):
         recent_split(frame, 2026)
+
+
+def test_week_requires_final_scores_and_both_teams_stats():
+    from types import SimpleNamespace
+    from backend.scripts.update_weekly import latest_complete_week
+
+    schedules = pd.DataFrame([
+        dict(season=2026, game_type='REG', week=week, game_id=str(week),
+             home_team='BUF', away_team='NYJ', home_score=21, away_score=14)
+        for week in [1, 2]
+    ])
+    players = pd.DataFrame([
+        dict(season=2026, game_id=game, team=team, position='QB', fantasy_points_ppr=10)
+        for game, team in [('1', 'BUF'), ('1', 'NYJ'), ('2', 'BUF'), ('2', 'NYJ')]
+    ])
+    data = SimpleNamespace(schedules=schedules, players=players)
+    assert latest_complete_week(data, 2026) == 2
+    data.players = players.iloc[:-1]
+    assert latest_complete_week(data, 2026) == 1
+    data.players = players
+    schedules.loc[1, 'away_score'] = float('nan')
+    assert latest_complete_week(data, 2026) == 1

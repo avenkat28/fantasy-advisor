@@ -21,10 +21,12 @@ from backend.scripts.build_player_stats import ROOT
 from backend.scripts.train_models import validate_dataset, xgb_pipeline
 
 
-def recent_split(frame, season, holdout_weeks=2):
+def recent_split(frame, season, holdout_weeks=2, allow_prior_season_only=False):
     regular = frame[frame.season_type.eq('REG') & frame.position.isin(['QB', 'RB', 'WR', 'TE', 'K', 'DST'])].copy()
     weeks = sorted(regular.loc[regular.season.eq(season), 'week'].unique())
-    if holdout_weeks < 1 or len(weeks) <= holdout_weeks:
+    if holdout_weeks < 1 or len(weeks) < holdout_weeks or (
+        len(weeks) == holdout_weeks and not allow_prior_season_only
+    ):
         raise ValueError('Insufficient current-season weeks for chronological evaluation')
     first = weeks[-holdout_weeks]
     train = regular[(regular.season < season) | (regular.season.eq(season) & regular.week.lt(first))]
@@ -34,12 +36,14 @@ def recent_split(frame, season, holdout_weeks=2):
     return train, test
 
 
-def refine(root=ROOT, season=2026, holdout_weeks=2, activate=False):
+def refine(root=ROOT, season=2026, holdout_weeks=2, activate=False, through_week=None):
     data = DataRepository(root)
     data.require_data()
     frame = build_features(data.players, data.schedules)
+    if through_week is not None:
+        frame = frame[frame.season.lt(season) | (frame.season.eq(season) & frame.week.le(through_week))]
     validate_dataset(frame)
-    train, test = recent_split(frame, season, holdout_weeks)
+    train, test = recent_split(frame, season, holdout_weeks, allow_prior_season_only=through_week is not None)
     version = 'ppr-refined-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     output = root / 'reports' / version
     models = root / 'models' / version
@@ -54,13 +58,14 @@ def refine(root=ROOT, season=2026, holdout_weeks=2, activate=False):
     report = dict(version=version, snapshot=data.snapshot, season=season, latest_week=latest_week,
                   evaluation_weeks=sorted(map(int, test.week.unique())), positions={},
                   injury_policy='Reports exported as observed. No retrospective injury features; existing pregame availability rules remain in use.',
-                  evaluation_policy='Recent observed games, including a possibly incomplete week. Fixed hyperparameters; no tuning on evaluation outcomes. Final candidate refit includes evaluation games and requires future prospective monitoring.',
+                  evaluation_policy=('Completed weeks. ' if through_week is not None else 'Recent observed games, possibly including an incomplete week. ')
+                  + 'Fixed hyperparameters. Final refit includes evaluation games.',
                   production_changed=False)
     predictions = []
     for position in ['QB', 'RB', 'WR', 'TE', 'K', 'DST']:
         fit = train[train.position.eq(position)]
         held = test[test.position.eq(position)]
-        if min(len(fit), len(held)) < 30:
+        if len(fit) < 30 or len(held) < (2 if through_week == 1 else 30):
             raise ValueError(f'Insufficient {position} observations')
         # Frozen benchmark avoids scoring a previously refreshed model on its own training games.
         incumbent = joblib.load(root / 'models/ppr-v1' / f'{position}.joblib')
@@ -105,7 +110,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--season', type=int, default=datetime.now(timezone.utc).year)
     parser.add_argument('--holdout-weeks', type=int, default=2)
-    parser.add_argument('--activate', action='store_true', help='Activate when both positions beat frozen ppr-v1 on MAE and RMSE')
+    parser.add_argument('--activate', action='store_true', help='Activate when all six positions beat frozen ppr-v1 on MAE and RMSE')
     args = parser.parse_args()
     refine(season=args.season, holdout_weeks=args.holdout_weeks, activate=args.activate)
 

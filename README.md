@@ -210,7 +210,7 @@ The macOS updater refreshes stats, schedules, weekly rosters, and nflverse injur
 .venv312/bin/python -m backend.scripts.install_schedule
 ```
 
-Runs Thursday and Monday at 6pm and Sunday at noon in the Mac's local timezone (Eastern on this machine). The Mac must be awake, logged in and online. Logs: `reports/weekly-update.log`. Run immediately with `.venv312/bin/python -m backend.scripts.update_weekly`. Loaded local APIs pick up a changed snapshot on the next request. This updates inputs and forecasts; it does not retrain ppr-v1.
+Runs Thursday and Monday at 6pm and Sunday and Tuesday at noon in the Mac's local timezone (Eastern on this machine). The Mac must be awake, logged in and online. Logs: `reports/weekly-update.log`. Run immediately with `.venv312/bin/python -m backend.scripts.update_weekly`. Loaded local APIs pick up a changed snapshot on the next request. This also trains a candidate when a new completed week is available.
 
 For a hosted site, install/authenticate the Vercel CLI and link this checkout to the intended project first. Reinstall with `--deploy` to publish each successful update using `vercel deploy --prod --yes`. The default local scheduler does **not** deploy. Vercel's filesystem is not durable storage: retain the local snapshot and `data/forecasts` archive, and upload both with each deployment. Git-based deployments must explicitly include the new generated snapshot and forecast files.
 
@@ -228,12 +228,13 @@ The weekly updater now retrains by default after a successful refresh. Use
 `python -m backend.scripts.update_weekly --season 2026` (or `--skip-refinement`
 for inputs/forecasts only). Run refinement alone with
 `python -m backend.scripts.refine_models --season 2026 --activate`.
-It requires at least three observed current-season weeks. The last two observed
-weeks are excluded from the evaluation fit; fixed XGBoost parameters avoid tuning
-against those outcomes. Both RB and WR must beat the frozen ppr-v1 benchmark on
+Scheduled training waits for final scores and player stats from both teams in every
+game. It evaluates on the last two completed weeks (one at the season opener), then
+refits on all completed weeks through that cutoff. It records the last successfully
+trained week so repeated forecast refreshes do not retrain it. All six position
+models must beat the frozen ppr-v1 benchmark on
 MAE and RMSE before an atomic `models/current.json` switch activates the final
-refit. That final refit uses all observed regular-season games through the selected
-season. New API instances honor the pointer; `FANTASY_MODELS` still overrides it.
+refit. That final refit uses regular-season games through the training cutoff. New API instances honor the pointer; `FANTASY_MODELS` still overrides it.
 Restart a running API after standalone model activation.
 
 Timestamped `reports/ppr-refined-*/` folders contain the snapshot provenance,

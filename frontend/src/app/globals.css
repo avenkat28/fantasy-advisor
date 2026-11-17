@@ -1834,3 +1834,48 @@ body {
 .status-dot { box-shadow: none; }
 .projection-number { color: var(--text); }
 .brand { border-radius: 8px; border-color: #e1ded4; }
+
+.workspace { position: relative; isolation: isolate; }
+.starfield {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+  color: #a9c8ff;
+}
+:root[data-theme="light"] .starfield { color: #466398; }
+.starfield::before, .starfield::after {
+  content: "";
+  position: absolute;
+  inset: -260px -260px 0 0;
+  background-image:
+    radial-gradient(circle at 12px 23px, currentColor 1px, transparent 1.8px),
+    radial-gradient(circle at 57px 137px, currentColor .7px, transparent 1.5px),
+    radial-gradient(circle at 186px 72px, currentColor 1px, transparent 1.9px),
+    radial-gradient(circle at 233px 212px, currentColor .6px, transparent 1.4px);
+  background-size: 260px 260px;
+  opacity: .32;
+  animation: star-drift 75s linear infinite;
+}
+.starfield::after {
+  opacity: .18;
+  background-position: 83px 53px;
+  animation-duration: 115s;
+}
+@keyframes star-drift { to { transform: translate(260px, 260px); } }
+@media (prefers-reduced-motion: reduce) {
+  .starfield::before, .starfield::after { animation: none; }
+}
+.league-size { max-width: 10rem; margin-block: 1rem; }
+.league-size select, .league-picks select, .panel .field-label select {
+  display: block;
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: .6rem;
+  border-radius: 6px;
+}
+.league-picks { list-style: none; padding: 0; }
+.league-picks li { display: flex; gap: .75rem; justify-content: space-between; align-items: center; padding: .5rem 0; }

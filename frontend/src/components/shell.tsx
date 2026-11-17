@@ -9,6 +9,8 @@ import {
   Search,
   ShieldCheck,
   TrendingUp,
+  Scale,
+  Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { SeasonProvider, useSeason, WeekPicker } from "./season-provider";
@@ -19,6 +21,8 @@ const links = [
   { href: "/projections", label: "Weekly Projections", icon: TrendingUp },
   { href: "/players", label: "Player Search", icon: Search },
   { href: "/compare", label: "Start/Sit Comparison", icon: ArrowLeftRight },
+  { href: "/trade", label: "Trade Analyzer", icon: Scale },
+  { href: "/team", label: "Team Evaluator", icon: Users },
   { href: "/performance", label: "Model Performance", icon: BarChart3 },
 ];
 export function Navigation() {
@@ -78,6 +82,7 @@ function Frame({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <div className="workspace">
+        <div className="starfield" aria-hidden="true" />
         <header className="topbar">
           <div className="workspace-title">
             <span className="topbar-icon">

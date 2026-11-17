@@ -83,9 +83,10 @@ describe("workspace and data views", () => {
       expect.any(AbortSignal),
     );
   });
-  it("provides all five navigation links and marks the active page", () => {
+  it("links to the league tools and marks the active page", () => {
     render(<Navigation />);
-    expect(screen.getAllByRole("link")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: "Trade Analyzer" })).toHaveAttribute("href", "/trade");
+    expect(screen.getByRole("link", { name: "Team Evaluator" })).toHaveAttribute("href", "/team");
     expect(
       screen.getByRole("link", { name: "Weekly Projections" }),
     ).toHaveAttribute("aria-current", "page");
