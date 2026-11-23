@@ -45,9 +45,8 @@ export default function ComparisonPage() {
   return (
     <>
       <PageHeading
-        eyebrow="THE MATCHUP DESK"
-        title="Make the call."
-        description="Two players, one decision. Compare the numbers before you set your lineup."
+        title="Start/sit comparison"
+        description="Compare two players’ projections for the selected week."
       />
       <Panel
         title="Build your comparison"

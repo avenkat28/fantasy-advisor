@@ -1,12 +1,12 @@
 {
-  "injuries": "data/snapshots/0ca807e5ff36478589c595792adb347e/injuries.parquet",
+  "injuries": "data/snapshots/d7ddd124d8a7486bbd164def5b305deb/injuries.parquet",
   "injury_error": null,
   "version": 1,
   "season": 2026,
-  "observed_at": "2026-11-17T21:37:24.403398+00:00",
-  "players": "data/snapshots/0ca807e5ff36478589c595792adb347e/players.parquet",
-  "schedules": "data/snapshots/0ca807e5ff36478589c595792adb347e/schedules.parquet",
-  "rosters": "data/snapshots/0ca807e5ff36478589c595792adb347e/rosters.parquet",
+  "observed_at": "2026-11-23T23:00:10.468875+00:00",
+  "players": "data/snapshots/d7ddd124d8a7486bbd164def5b305deb/players.parquet",
+  "schedules": "data/snapshots/d7ddd124d8a7486bbd164def5b305deb/schedules.parquet",
+  "rosters": "data/snapshots/d7ddd124d8a7486bbd164def5b305deb/rosters.parquet",
   "roster_seasons": [
     2026
   ],
@@ -18,11 +18,11 @@
     "nflreadpy.load_team_stats",
     "nflreadpy.load_teams"
   ],
-  "latest_statistical_game": "2026-11-16",
+  "latest_statistical_game": "2026-11-22",
   "rows": {
-    "players": 25911,
+    "players": 26230,
     "schedules": 1127,
-    "rosters": 82002
+    "rosters": 108914
   },
   "scoring_policy": "default-k-dst-v1"
 }

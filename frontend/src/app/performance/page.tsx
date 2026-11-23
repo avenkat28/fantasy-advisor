@@ -24,8 +24,7 @@ export default function PerformancePage() {
     <>
       <WeeklyResultsPanel />
       <PageHeading
-        eyebrow="TRANSPARENCY BY DESIGN"
-        title="Trust the evidence."
+        title="Model performance"
         description="See how the models performed on held-out games, including comparisons against simpler baselines."
         action={
           <span className="tag">

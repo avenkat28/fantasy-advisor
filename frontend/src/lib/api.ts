@@ -109,10 +109,11 @@ export const api = {
     signal?: AbortSignal,
     offset = 0,
     limit = 500,
+    includeSaved = false,
   ) =>
     get<WeeklyProjections>(
       "/projections",
-      { ...selection, position, offset, limit },
+      { ...selection, position, offset, limit, include_saved: includeSaved ? 1 : undefined },
       signal,
     ),
   compare: (

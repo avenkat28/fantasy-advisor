@@ -67,6 +67,28 @@ def test_health_search_details(client):
     assert client.get('/api/players/unknown').status_code == 404
 
 
+def test_league_projection_pool_can_use_saved_forecasts(client, setup, monkeypatch):
+    from backend.api.data import APIError
+    from backend.api.tracking import archive_path
+
+    _, service, root = setup
+    params = {'season': 2025, 'week': 4}
+    saved = client.get('/api/projections', params=params).json()['projections']
+    archive = archive_path(root, 2025, 4)
+    archive.parent.mkdir(parents=True)
+    archive.write_text(json.dumps(saved))
+
+    def no_live_roster(*args):
+        raise APIError(422, 'roster_unavailable', 'No fresh roster.')
+
+    monkeypatch.setattr(service, 'weekly', no_live_roster)
+    assert client.get('/api/projections', params=params).status_code == 422
+    response = client.get('/api/projections', params={**params, 'include_saved': True, 'limit': 1})
+    assert response.status_code == 200
+    assert response.json()['projections'] == saved[:1]
+    assert response.json()['total'] == len(saved)
+
+
 def test_position_models_schema_weekly_comparison(client):
     params = {'season': 2025, 'week': 4}
     wr = client.get('/api/projections/a', params=params)

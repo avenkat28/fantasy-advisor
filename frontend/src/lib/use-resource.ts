@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 /** Loader must be memoized. Abort and request identity prevent outdated data flashing after filter changes. */
 export function useResource<T>(
   loader: ((signal: AbortSignal) => Promise<T>) | null,
+  refreshIntervalMs?: number,
 ) {
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<{
@@ -14,11 +15,12 @@ export function useResource<T>(
   useEffect(() => {
     if (!loader) return;
     const controller = new AbortController();
-    loader(controller.signal).then(
-      (data) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = async () => {
+      try {
+        const data = await loader(controller.signal);
         if (!controller.signal.aborted) setState({ loader, revision, data });
-      },
-      (error) => {
+      } catch (error) {
         if (!controller.signal.aborted)
           setState({
             loader,
@@ -28,10 +30,17 @@ export function useResource<T>(
                 ? error
                 : new Error("Unable to load data."),
           });
-      },
-    );
-    return () => controller.abort();
-  }, [loader, revision]);
+      } finally {
+        if (!controller.signal.aborted && refreshIntervalMs)
+          timer = setTimeout(refresh, refreshIntervalMs);
+      }
+    };
+    void refresh();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [loader, revision, refreshIntervalMs]);
   const current = state.loader === loader && state.revision === revision;
   return {
     data: current ? state.data : undefined,

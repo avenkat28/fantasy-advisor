@@ -67,7 +67,7 @@ function Frame({ children }: { children: ReactNode }) {
           <div className="model-note">
             <ShieldCheck size={20} />
             <div>
-              <strong>Built on the numbers</strong>
+              <strong>Scoring and models</strong>
               <p>
                 Full-PPR · QB, RB, WR, TE, K & D/ST
                 <br />
@@ -77,7 +77,7 @@ function Frame({ children }: { children: ReactNode }) {
           </div>
           <div className="sidebar-foot">
             <span className="status-dot" />
-            NFL analytics workspace<span>v0.5</span>
+            Fantasy Advisor <span>v0.5</span>
           </div>
         </div>
       </aside>
@@ -88,7 +88,7 @@ function Frame({ children }: { children: ReactNode }) {
             <span className="topbar-icon">
               <BarChart3 size={17} />
             </span>{" "}
-            NFL Fantasy Intelligence <span className="tag">FULL PPR</span>
+            Fantasy Advisor <span className="tag">FULL PPR</span>
           </div>
           <div className="topbar-controls"><ThemeToggle /><WeekPicker /></div>
         </header>
@@ -97,8 +97,7 @@ function Frame({ children }: { children: ReactNode }) {
         </main>
         <footer className="footer">
           <span>
-            FantasyAdvisor <span className="muted">/</span> Informed decisions.
-            Every week.
+            Fantasy Advisor
           </span>
           <span className="snapshot-label">
             <span

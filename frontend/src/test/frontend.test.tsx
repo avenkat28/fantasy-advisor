@@ -11,6 +11,8 @@ import Dashboard from "@/app/page";
 import ProjectionsPage from "@/app/projections/page";
 import ComparisonPage from "@/app/compare/page";
 import PerformancePage from "@/app/performance/page";
+import TeamPage from "@/app/team/page";
+import TradePage from "@/app/trade/page";
 import { Navigation } from "@/components/shell";
 import { PlayerSearch } from "@/components/player-search";
 import { PlayerProfile } from "@/components/player-profile";
@@ -68,10 +70,33 @@ function renderWithSeason(ui: React.ReactNode) {
 }
 
 describe("workspace and data views", () => {
+  it("grades both sides of a trade using the complete projection pool", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.weekly)
+      .mockResolvedValueOnce({ ...weekly, projections: [player], limit: 1 })
+      .mockResolvedValueOnce({ ...weekly, projections: [receiver], offset: 1, limit: 1 });
+    renderWithSeason(<TradePage />);
+    await user.selectOptions(await screen.findByLabelText(/Team A receives · Add a player/), player.player_id);
+    await user.selectOptions(screen.getByLabelText(/Team B receives · Add a player/), receiver.player_id);
+    expect(screen.getByText(/18.5 value points received/)).toBeInTheDocument();
+    expect(screen.getByText(/17.0 value points received/)).toBeInTheDocument();
+    expect(api.weekly).toHaveBeenLastCalledWith({ season: 2026, week: 7 }, undefined, expect.any(AbortSignal), 1, 1, true);
+  });
+
+  it("updates the projected lineup and score when a roster player is added or removed", async () => {
+    const user = userEvent.setup();
+    renderWithSeason(<TeamPage />);
+    await user.selectOptions(await screen.findByLabelText(/Your roster · Add a player/), player.player_id);
+    expect(screen.getByText(/18.5 PPR · League starter benchmark/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Test Runner · 18.5 PPR/)).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Remove Test Runner" }));
+    expect(screen.getByText("Add roster picks with projections to see a grade.")).toBeInTheDocument();
+  });
+
   it("renders the main dashboard with real API-derived rankings and metrics", async () => {
     renderWithSeason(<Dashboard />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Your edge starts here",
+      "Fantasy dashboard",
     );
     expect(
       await screen.findByRole("link", { name: /Test Runner/ }),

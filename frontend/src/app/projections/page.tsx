@@ -41,7 +41,6 @@ export default function ProjectionsPage() {
     <>
       <WeeklyResultsPanel />
       <PageHeading
-        eyebrow="THE WEEKLY BOARD"
         title="Weekly projections"
         description="Find the opportunity. Compare every available QB, RB, WR, TE, K and D/ST projection."
       />

@@ -2,13 +2,8 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   ArrowLeftRight,
   ArrowUpRight,
-  Database,
-  ScanLine,
-  Search,
-  ShieldCheck,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
@@ -44,48 +39,27 @@ export default function Dashboard() {
     <>
       <div className="dashboard-heading">
         <div>
-          <div className="eyebrow">
-            <span className="status-dot" /> YOUR WEEKLY GAME PLAN
-          </div>
-          <h1>
-            Your edge starts here<span className="mint">.</span>
-          </h1>
-          <p>Less guesswork. More game plan. Put the numbers on your side.</p>
+          <h1>Fantasy dashboard</h1>
+          <p className="dashboard-meta">
+            {selection ? `${selection.season} / Week ${selection.week}` : "Loading week…"}
+            <span>Full PPR</span>
+            {health?.snapshot && <span>Stats through {dateLabel(health.snapshot.latest_statistical_game)}</span>}
+          </p>
         </div>
-        <Link href="/compare" className="button primary">
-          <ArrowLeftRight size={17} /> Make a start/sit call
-          <ArrowUpRight size={16} />
+        <Link href="/compare" className="button">
+          <ArrowLeftRight size={17} /> Compare players
         </Link>
       </div>
-      <div className="insight-strip">
-        <div>
-          <Database size={17} />
-          <span>
-            {selection
-              ? `${selection.season} · Week ${selection.week}`
-              : "Connecting to your data"}
-          </span>
-          <span className="strip-dot">/</span>
-          <span>Full-PPR projections</span>
-        </div>
-        <span>
-          Statistical snapshot:{" "}
-          {dateLabel(health?.snapshot?.latest_statistical_game)}
-        </span>
-      </div>
-      <div className="stats-grid">
+      <div className="stats-grid dashboard-stats">
         <Stat
-          label="AVAILABLE PROJECTIONS"
+          label="Players projected"
           value={weekly.data ? weekly.data.total : "—"}
           note={
-            weekly.data
-              ? "QB + RB + WR + TE + K + D/ST · selected week"
-              : "Awaiting selected-week data"
+            weekly.data ? undefined : "Awaiting weekly data"
           }
-          accent
         />
         <Stat
-          label="RB MODEL · TEST MAE"
+          label="RB average error"
           value={
             <>
               <NumberValue
@@ -106,7 +80,7 @@ export default function Dashboard() {
           }
         />
         <Stat
-          label="WR MODEL · TEST MAE"
+          label="WR average error"
           value={
             <>
               <NumberValue
@@ -116,20 +90,19 @@ export default function Dashboard() {
               <small> PPR</small>
             </>
           }
-          note="Typical absolute error · lower is better"
+          note={performance.data?.periods.test}
         />
       </div>
       <div className="section-title">
         <div>
-          <h2>The projection board</h2>
-          <p>The highest estimates for your selected week.</p>
+          <h2>Top projections</h2>
         </div>
-        <TextLink href="/projections">Explore all projections</TextLink>
+        <TextLink href="/projections">All projections</TextLink>
       </div>
       {!selection || weekly.loading ? (
-        <Loading label="Building your weekly projection board…" />
+        <Loading label="Loading projections…" />
       ) : weekly.error ? (
-        <Panel title="The board is waiting on data">
+        <Panel title="Projections unavailable">
           <ErrorState error={weekly.error} retry={weekly.retry} />
           <p className="panel-footnote">
             Choose a different week above. Player research and saved model
@@ -152,8 +125,7 @@ export default function Dashboard() {
       )}
       <div className="dashboard-lower">
         <Panel
-          title="A look at the leaders"
-          subtitle="Selected-week estimates · not guaranteed outcomes"
+          title="Projected scoring leaders"
         >
           {players.length ? (
             <RankingChart players={players} />
@@ -164,56 +136,19 @@ export default function Dashboard() {
             />
           )}
         </Panel>
-        <section className="decision-card">
-          <div className="eyebrow">
-            <ScanLine size={15} /> THE MATCHUP DESK
+        <Panel title="Tools">
+          <div className="dashboard-tools">
+            {[
+              ["/players", "Player search"],
+              ["/trade", "Trade analyzer"],
+              ["/team", "Team evaluator"],
+              ["/performance", "Model performance"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href}>{label}<ArrowUpRight size={16} aria-hidden="true" /></Link>
+            ))}
           </div>
-          <h2>
-            Two players.
-            <br />
-            One lineup spot.
-          </h2>
-          <p>
-            Compare projections, recent usage, and defensive matchups. See the
-            evidence behind the call.
-          </p>
-          <div className="field-art" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-            <i className="field-marker first">A</i>
-            <i className="field-marker second">B</i>
-            <ArrowLeftRight size={28} />
-          </div>
-          <Link href="/compare" className="button primary">
-            Compare players
-            <ArrowRight size={16} />
-          </Link>
-        </section>
+        </Panel>
       </div>
-      <div className="quick-links">
-        <Link href="/players">
-          <Search size={21} />
-          <div>
-            <strong>Find your next starter</strong>
-            <span>Search players and explore their production.</span>
-          </div>
-          <ArrowUpRight size={18} />
-        </Link>
-        <Link href="/performance">
-          <ShieldCheck size={21} />
-          <div>
-            <strong>Know the model’s limits</strong>
-            <span>Real test results. Transparent evaluation.</span>
-          </div>
-          <ArrowUpRight size={18} />
-        </Link>
-      </div>
-      <p className="disclaimer">
-        Projections are estimates, not promises. No calibrated confidence
-        intervals or verified game-day availability are provided.
-      </p>
     </>
   );
 }

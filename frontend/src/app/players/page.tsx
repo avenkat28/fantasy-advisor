@@ -4,8 +4,7 @@ export default function PlayersPage() {
   return (
     <>
       <PageHeading
-        eyebrow="PLAYER RESEARCH"
-        title="Look beyond the box score."
+        title="Player search"
         description="Find running backs and wide receivers. Explore the production behind the projection."
       />
       <Panel

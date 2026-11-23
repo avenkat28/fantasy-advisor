@@ -14,6 +14,7 @@ from backend.api import schemas as s
 from backend.api.comparison import compare_projections
 from backend.api.data import APIError, DataRepository
 from backend.api.predictions import ELIGIBILITY, PredictionService
+from backend.api.tracking import load_forecasts, weekly_results
 
 Season = Annotated[int, Query(ge=2023, le=2100)]
 Week = Annotated[int, Query(ge=1, le=18)]
@@ -81,7 +82,6 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
 
     @app.get('/api/results')
     def results(request: Request, season: Season, week: Week):
-        from backend.api.tracking import weekly_results
         return weekly_results(request.app.state.data, season, week)
 
     @app.get('/api/players', response_model=list[s.Player])
@@ -94,8 +94,20 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
 
     @app.get('/api/projections', response_model=s.WeeklyProjections)
     def weekly(request: Request, season: Season, week: Week, position: Literal['QB', 'RB', 'WR', 'TE', 'K', 'DST'] | None = None,
-               limit: Limit = 50, offset: Offset = 0):
-        predictions, unavailable = request.app.state.predictions.weekly(season, week, position)
+               limit: Limit = 50, offset: Offset = 0, include_saved: bool = False):
+        service = request.app.state.predictions
+        saved = load_forecasts(service.data.root, season, week) if include_saved else []
+        try:
+            predictions, unavailable = service.weekly(season, week, position)
+        except APIError as error:
+            if not saved or error.code != 'roster_unavailable':
+                raise
+            predictions, unavailable = [], []
+        if saved:
+            pool = {row['player_id']: row for row in saved if position is None or row['position'] == position}
+            pool.update({row['player_id']: row for row in predictions})
+            predictions = sorted(pool.values(), key=lambda row: (-row['projected_ppr_points'], row['player_id']))
+            unavailable = [row for row in unavailable if row['player_id'] not in pool]
         return dict(projections=predictions[offset:offset + limit], unavailable=unavailable,
                     total=len(predictions), offset=offset, limit=limit, eligibility=ELIGIBILITY)
 

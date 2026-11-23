@@ -79,9 +79,19 @@ def publish_snapshot(root: Path, season: int, raw_stats: pd.DataFrame,
     combined = pd.concat([old[old.season.ne(season)], stats], ignore_index=True)
     schedules = pd.concat([old_schedules[old_schedules.season.ne(season)], schedules[schedules.season.eq(season)]], ignore_index=True)
     attached, context = schedule_context(combined, schedules)
-    cutoff = pd.Timestamp(observed_at).tz_convert(None).normalize()
-    if attached.loc[attached.season.eq(season), 'game_date'].ge(cutoff).any():
+    cutoff = pd.Timestamp(observed_at).tz_convert('America/New_York').tz_localize(None).normalize()
+    current = attached.season.eq(season)
+    if attached.loc[current, 'game_date'].gt(cutoff).any():
         raise ValueError('Statistics include target-day/future games; refusing snapshot')
+    # Same-day statistical feeds can arrive before the schedule marks the game final.
+    # Hold those rows until both final scores are present.
+    if {'home_score', 'away_score'} <= set(schedules):
+        final_games = schedules.dropna(subset=['home_score', 'away_score']).game_id
+        pending = current & attached.game_date.eq(cutoff) & ~attached.game_id.isin(final_games)
+    else:
+        pending = current & attached.game_date.eq(cutoff)
+    combined = combined.loc[~pending.to_numpy()]
+    attached = attached.loc[~pending]
     # Rosters can include bye teams: validate team against the season, not against each week's games.
     if not set(roster.team) <= set(context.loc[context.season.eq(season), 'team']):
         raise ValueError('Roster teams do not match the schedule')

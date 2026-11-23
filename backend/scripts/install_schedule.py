@@ -17,10 +17,10 @@ def main():
     path = Path.home() / 'Library/LaunchAgents' / f'{label}.plist'
     log = ROOT / 'reports/weekly-update.log'
     log.parent.mkdir(parents=True, exist_ok=True)
-    # launchd uses the Mac's local timezone. Thursday/Monday evening; Sunday before games; Tuesday after Monday Night Football.
+    # Poll regularly; the updater uses NFL kickoff times to decide when to fetch.
     payload = dict(Label=label, WorkingDirectory=str(ROOT),
-                   ProgramArguments=[sys.executable, '-m', 'backend.scripts.update_weekly'] + (['--deploy'] if args.deploy else []),
-                   StartCalendarInterval=[dict(Weekday=4, Hour=18, Minute=0), dict(Weekday=0, Hour=12, Minute=0), dict(Weekday=1, Hour=18, Minute=0), dict(Weekday=2, Hour=12, Minute=0)],
+                   ProgramArguments=[sys.executable, '-m', 'backend.scripts.update_weekly', '--scheduled'] + (['--deploy'] if args.deploy else []),
+                   StartCalendarInterval=[dict(Minute=minute) for minute in range(0, 60, 15)],
                    StandardOutPath=str(log), StandardErrorPath=str(log),
                    EnvironmentVariables={'PATH': os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin')})
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -28,7 +28,7 @@ def main():
         subprocess.run(['launchctl', 'bootout', f'gui/{os.getuid()}', str(path)], check=False)
     path.write_bytes(plistlib.dumps(payload))
     subprocess.run(['launchctl', 'bootstrap', f'gui/{os.getuid()}', str(path)], check=True)
-    print(f'Installed {path}: Thu/Mon 6pm, Sun/Tue noon, local timezone.')
+    print(f'Installed {path}: checks every 15 minutes.')
 
 
 if __name__ == '__main__':

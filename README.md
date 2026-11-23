@@ -210,7 +210,7 @@ The macOS updater refreshes stats, schedules, weekly rosters, and nflverse injur
 .venv312/bin/python -m backend.scripts.install_schedule
 ```
 
-Runs Thursday and Monday at 6pm and Sunday and Tuesday at noon in the Mac's local timezone (Eastern on this machine). The Mac must be awake, logged in and online. Logs: `reports/weekly-update.log`. Run immediately with `.venv312/bin/python -m backend.scripts.update_weekly`. Loaded local APIs pick up a changed snapshot on the next request. This also trains a candidate when a new completed week is available.
+Checks every 15 minutes for games awaiting final scores or player stats, beginning two hours after scheduled kickoff. Between those checks it refreshes at least every six hours. Results appear once nflverse publishes the data. The Mac must be awake, logged in and online. Logs are in `reports/weekly-update.log`. Run immediately with `.venv312/bin/python -m backend.scripts.update_weekly`. The local API picks up a changed snapshot on the next request, and open results panels reload every minute. The updater also trains a candidate when a new completed week is available.
 
 For a hosted site, install/authenticate the Vercel CLI and link this checkout to the intended project first. Reinstall with `--deploy` to publish each successful update using `vercel deploy --prod --yes`. The default local scheduler does **not** deploy. Vercel's filesystem is not durable storage: retain the local snapshot and `data/forecasts` archive, and upload both with each deployment. Git-based deployments must explicitly include the new generated snapshot and forecast files.
 

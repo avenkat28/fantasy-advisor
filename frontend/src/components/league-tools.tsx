@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useSeason } from "./season-provider";
-import { ErrorState, Loading, Panel } from "./ui";
+import { ErrorState, Loading, PageHeading, Panel } from "./ui";
 import { api } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import { bestLineup, leagueBaselines, letterGrade } from "@/lib/league-grades";
@@ -33,10 +33,11 @@ function Picks({ title, pool, picks, onChange }: {
 export function LeagueTools({ trade = false }: { trade?: boolean }) {
   const { selection } = useSeason();
   const load = useCallback(async (signal: AbortSignal) => {
-    const first = await api.weekly({ season: selection!.season, week: selection!.week }, undefined, signal);
+    if (!selection) return [];
+    const first = await api.weekly(selection, undefined, signal, 0, 500, true);
     const pool = [...first.projections];
     for (let offset = first.limit; offset < first.total; offset += first.limit) {
-      const page = await api.weekly(selection!, undefined, signal, offset);
+      const page = await api.weekly(selection, undefined, signal, offset, first.limit, true);
       pool.push(...page.projections);
     }
     return pool;
@@ -64,14 +65,14 @@ export function LeagueTools({ trade = false }: { trade?: boolean }) {
   const tradeGrade = (received: number) => letterGrade(a + b ? 2 * received / (a + b) : 1);
 
   return <>
-    <h1>{trade ? "Trade Analyzer" : "Team Evaluator"}</h1>
-    <p>Full PPR · {selection ? `${selection.season} Week ${selection.week}` : "Select a season and week"} · 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX, 1 K, 1 D/ST</p>
+    <PageHeading title={trade ? "Trade Analyzer" : "Team Evaluator"}
+      description={`Full PPR · ${selection ? `${selection.season} Week ${selection.week}` : "Select a season and week"} · 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX, 1 K, 1 D/ST`} />
     <label className="field-label league-size">Number of teams
       <select value={teams} onChange={(e) => setTeams(Number(e.target.value))}>
         {Array.from({ length: 13 }, (_, i) => i + 6).map((size) => <option key={size}>{size}</option>)}
       </select>
     </label>
-    {result.loading && <Loading label="Loading Full PPR projections…" />}
+    {(!selection || result.loading) && <Loading label="Loading Full PPR projections…" />}
     {result.error && <ErrorState error={result.error} retry={result.retry} />}
     {pool?.length === 0 && <p>No projections are available. Select another week.</p>}
     {!!pool?.length && <>

@@ -154,6 +154,22 @@ def test_future_statistics_do_not_replace_working_snapshot(setup):
     assert (data.root / 'data/current.json').read_bytes() == before
 
 
+def test_same_day_statistics_are_published_only_for_final_games(setup):
+    data, _, _ = setup
+    stats = data.players.drop(columns=['game_date', 'is_home'])
+    for column in SCORING_WEIGHTS:
+        if column not in stats:
+            stats[column] = 0.
+    schedules = data.schedules.assign(home_score=None, away_score=None)
+    latest = schedules.gameday.max()
+    final = schedules[schedules.gameday.eq(latest)].iloc[0].game_id
+    schedules.loc[schedules.week.eq(4), 'gameday'] = latest
+    schedules.loc[schedules.game_id.eq(final), ['home_score', 'away_score']] = [24, 17]
+    publish_snapshot(data.root, 2025, stats, schedules, roster_frame(), f'{latest}T23:59:00Z')
+    rows = DataRepository(data.root).players
+    assert set(rows[rows.game_date.eq(pd.Timestamp(latest))].game_id) == {final}
+
+
 def test_source_roster_status_filters_recommendations(setup):
     data, _ = published(setup)
     data.rosters.loc[data.rosters.player_id.eq('a'), 'roster_status'] = 'RES'

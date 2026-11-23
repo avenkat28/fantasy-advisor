@@ -8,9 +8,14 @@ def archive_path(root, season, week):
     return root / 'data/forecasts' / str(season) / f'{week}.json'
 
 
+def load_forecasts(root, season, week):
+    path = archive_path(root, season, week)
+    return json.loads(path.read_text()) if path.exists() else []
+
+
 def save_forecasts(service, season, week):
     path = archive_path(service.data.root, season, week)
-    existing = json.loads(path.read_text()) if path.exists() else []
+    existing = load_forecasts(service.data.root, season, week)
     predictions, _ = service.weekly(season, week, None)
     now = pd.Timestamp.now(tz='UTC')
     # Keep completed games immutable; update only games that have not started.
@@ -25,10 +30,12 @@ def save_forecasts(service, season, week):
 
 
 def weekly_results(data, season, week):
-    path = archive_path(data.root, season, week)
-    saved = json.loads(path.read_text()) if path.exists() else []
-    actuals = data.players[data.players.season.eq(season) & data.players.week.eq(week) & data.players.season_type.eq('REG')]
-    actuals = actuals.set_index('player_id')
+    saved = load_forecasts(data.root, season, week)
+    actuals = pd.DataFrame(columns=['fantasy_points_ppr', 'position', 'player_name'])
+    if not data.players.empty:
+        players = data.players
+        actuals = players[players.season.eq(season) & players.week.eq(week) & players.season_type.eq('REG')
+                          & players.fantasy_points_ppr.notna()].set_index('player_id')
     rows = []
     for p in saved:
         actual = float(actuals.loc[p['player_id'], 'fantasy_points_ppr']) if p['player_id'] in actuals.index else None
