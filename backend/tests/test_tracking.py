@@ -1,7 +1,9 @@
 import json
 
 import pandas as pd
+from fastapi.testclient import TestClient
 
+from backend.api.main import create_app
 from backend.api.tracking import archive_path, weekly_results
 from backend.tests.test_api import setup  # noqa: F401
 
@@ -32,3 +34,23 @@ def test_results_compare_matched_baseline_without_backfill(setup):
     assert any(r['projected'] is None and r['actual'] is not None for r in results['records'])
     path.unlink()
     assert weekly_results(data, 2025, 4)['metrics'] == []
+
+
+def test_current_projection_matches_player_page_and_keeps_scoring_frozen(setup):
+    data, service, root = setup
+    saved = service.project('a', 2025, 4)
+    saved['projected_ppr_points'] = 18.0
+    path = archive_path(root, 2025, 4)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps([saved]))
+    params = {'season': 2025, 'week': 4}
+    with TestClient(create_app(data, service)) as client:
+        player = client.get('/api/projections/a', params=params).json()
+        archived = client.get('/api/results', params=params).json()
+        combined = client.get('/api/results', params={**params, 'include_current': True}).json()
+    row = next(row for row in combined['records'] if row['player_id'] == 'a')
+    assert row['current_projection'] == player['projected_ppr_points']
+    assert row['projected'] == 18.0
+    assert row['error'] == 18.0 - row['actual']
+    assert combined['metrics'] == archived['metrics']
+    assert path.read_text() == json.dumps([saved])

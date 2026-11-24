@@ -130,5 +130,5 @@ export interface Selection {
 export interface WeeklyResults {
   season: number; week: number; message: string;
   metrics: {model: string; count: number; mae: number; rmse: number; bias: number}[];
-  records: {player_id: string; player_name: string; position: string; projected: number | null; actual: number | null; baseline: number | null; error: number | null; captured_at: string | null}[];
+  records: {player_id: string; player_name: string; position: string; current_projection?: number; projected: number | null; actual: number | null; baseline: number | null; error: number | null; captured_at: string | null}[];
 }

@@ -91,7 +91,8 @@ async function get<T>(
   }
 }
 export const api = {
-  results: (selection: Selection, signal?: AbortSignal) => get<WeeklyResults>("/results", {...selection}, signal),
+  results: (selection: Selection, signal?: AbortSignal, includeCurrent = false) =>
+    get<WeeklyResults>("/results", { ...selection, include_current: includeCurrent ? 1 : undefined }, signal),
   health: (signal?: AbortSignal) => get<Health>("/health", {}, signal),
   players: (search = "", signal?: AbortSignal) =>
     get<Player[]>("/players", { search, limit: 50 }, signal),

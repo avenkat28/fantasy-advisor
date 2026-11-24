@@ -22,7 +22,7 @@ export default function PerformancePage() {
   const models = data?.metrics.filter((m) => m.model === "xgboost");
   return (
     <>
-      <WeeklyResultsPanel />
+      <WeeklyResultsPanel showCurrentProjection />
       <PageHeading
         title="Model performance"
         description="See how the models performed on held-out games, including comparisons against simpler baselines."

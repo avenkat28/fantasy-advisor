@@ -70,6 +70,22 @@ function renderWithSeason(ui: React.ReactNode) {
 }
 
 describe("workspace and data views", () => {
+  it("shows the player projection alongside the archived forecast in Model Performance", async () => {
+    vi.mocked(api.results).mockResolvedValue({
+      season: 2026, week: 11, message: "", metrics: [],
+      records: [{
+        player_id: "purdy", player_name: "Brock Purdy", position: "QB",
+        current_projection: 21.8, projected: 18.6, actual: null, baseline: null, error: null, captured_at: null,
+      }],
+    });
+    renderWithSeason(<PerformancePage />);
+    const row = await screen.findByRole("row", { name: /Brock Purdy/ });
+    expect(within(row).getAllByRole("cell").slice(1, 3).map((cell) => cell.textContent)).toEqual(["21.8", "18.6"]);
+    expect(screen.getByRole("columnheader", { name: "Projected" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Saved forecast" })).toBeInTheDocument();
+    expect(api.results).toHaveBeenCalledWith(expect.anything(), expect.any(AbortSignal), true);
+  });
+
   it("grades both sides of a trade using the complete projection pool", async () => {
     const user = userEvent.setup();
     vi.mocked(api.weekly)

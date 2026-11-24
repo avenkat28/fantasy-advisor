@@ -29,7 +29,7 @@ def save_forecasts(service, season, week):
     return len(future)
 
 
-def weekly_results(data, season, week):
+def weekly_results(data, season, week, current=None):
     saved = load_forecasts(data.root, season, week)
     actuals = pd.DataFrame(columns=['fantasy_points_ppr', 'position', 'player_name'])
     if not data.players.empty:
@@ -58,5 +58,15 @@ def weekly_results(data, season, week):
             errors = [r[field] - r['actual'] for r in pairs]
             metrics.append(dict(model=name, count=len(errors), mae=sum(abs(e) for e in errors)/len(errors),
                                 rmse=(sum(e*e for e in errors)/len(errors))**.5, bias=sum(errors)/len(errors)))
+    if current is not None:
+        by_id = {row['player_id']: row for row in rows}
+        for prediction in current:
+            player_id = prediction['player_id']
+            if player_id not in by_id:
+                row = dict(player_id=player_id, player_name=prediction['player_name'], position=prediction['position'],
+                           projected=None, actual=None, baseline=None, error=None, captured_at=None)
+                rows.append(row)
+                by_id[player_id] = row
+            by_id[player_id]['current_projection'] = prediction['projected_ppr_points']
     return dict(season=season, week=week, records=rows, metrics=metrics,
                 message='Only forecasts saved before the game are scored. Missing actuals remain pending; no forecast is backfilled.')

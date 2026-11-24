@@ -81,8 +81,16 @@ def create_app(repository: DataRepository | None = None, predictions: Prediction
         return dict(status='ok' if all(models.values()) and available else 'degraded', models_available=models, data_available=available, snapshot=snapshot)
 
     @app.get('/api/results')
-    def results(request: Request, season: Season, week: Week):
-        return weekly_results(request.app.state.data, season, week)
+    def results(request: Request, season: Season, week: Week, include_current: bool = False):
+        service = request.app.state.predictions
+        current = None
+        if include_current:
+            try:
+                current, _ = service.weekly(season, week, None)
+            except APIError:
+                # Historical results remain available when a week cannot be projected.
+                current = []
+        return weekly_results(service.data, season, week, current)
 
     @app.get('/api/players', response_model=list[s.Player])
     def players(request: Request, search: str = '', limit: Limit = 50):
